@@ -128,29 +128,9 @@ export async function POST(req: NextRequest) {
                 merchantPayout: merchantPayout.toFixed(2),
             },
             automatic_payment_methods: {
-                enabled: true,
-            },
-        };
-
-        // Add Connect-specific fields only if using Stripe Connect
-        if (useStripeConnect) {
-            // Use on_behalf_of to make the MERCHANT pay Stripe fees
-            // This creates a "direct charge" instead of "destination charge"
-            paymentIntentData.on_behalf_of = truck.owner.stripeConnectId;
-            paymentIntentData.application_fee_amount = toStripeCents(platformFee);
-
-            // Merchant receives: (subtotal + tax) - stripe_fee
-            // Platform receives: platformFee (via application_fee_amount)
-            // Stripe fees are charged to the connected account (merchant)
-        }
-
-        const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
-
-        // Update order with payment intent ID
-        await prisma.order.update({
-            where: { id: order.id },
-            data: { stripePaymentId: paymentIntent.id },
-        });
+                where: { id: order.id },
+                data: { stripePaymentId: paymentIntent.id },
+            });
 
         return NextResponse.json({
             clientSecret: paymentIntent.client_secret,
