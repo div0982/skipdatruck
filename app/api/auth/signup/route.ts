@@ -48,8 +48,16 @@ export async function POST(request: NextRequest) {
         });
     } catch (error: any) {
         console.error('Signup error:', error);
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            meta: error.meta,
+        });
         return NextResponse.json(
-            { error: 'Failed to create account' },
+            {
+                error: 'Failed to create account',
+                details: error.message || 'Unknown error'
+            },
             { status: 500 }
         );
     }
