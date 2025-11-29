@@ -72,14 +72,17 @@ export async function POST(req: NextRequest) {
         // Calculate customer total (subtotal + tax + platformFee)
         const total = calculateTotal(subtotal, tax, platformFee);
 
-        // Validation: Ensure transfer amount + app fee don't exceed charge
-        const transferAmount = merchantPayout;
-        if (Math.abs((transferAmount + platformFee) - total) > 0.01) {
+        // Validation: Ensure all money is accounted for
+        // total should equal: merchantPayout + platformFee + stripeFee
+        const totalCheck = merchantPayout + platformFee + stripeFee;
+        if (Math.abs(totalCheck - total) > 0.01) {
             console.error('Fee calculation error:', {
                 total,
-                transferAmount,
+                merchantPayout,
                 platformFee,
-                sum: transferAmount + platformFee
+                stripeFee,
+                totalCheck,
+                difference: totalCheck - total
             });
             return NextResponse.json(
                 { error: 'Fee calculation error. Please contact support.' },
