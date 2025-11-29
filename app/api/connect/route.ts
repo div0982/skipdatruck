@@ -137,13 +137,27 @@ export async function GET(req: NextRequest) {
             });
         }
 
-        // Get account details from Stripe
+        // Get account details from Stripe (real-time status)
         const account = await stripe.accounts.retrieve(user.stripeConnectId);
+
+        const isOnboarded = account.charges_enabled && account.payouts_enabled;
+
+        // Update database if status changed
+        if (isOnboarded && !user.stripeOnboarded) {
+            await prisma.user.update({
+                where: { id: userId },
+                data: { stripeOnboarded: true },
+            });
+        }
 
         return NextResponse.json({
             connected: true,
-            onboarded: account.charges_enabled && account.payouts_enabled,
+            onboarded: isOnboarded,
             accountId: user.stripeConnectId,
+            details: {
+                charges_enabled: account.charges_enabled,
+                payouts_enabled: account.payouts_enabled,
+            },
         });
 
     } catch (error: any) {
