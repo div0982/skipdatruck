@@ -1,9 +1,27 @@
-export { default } from "next-auth/middleware";
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
-// Protect these routes - require authentication
+export async function middleware(request: NextRequest) {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+
+    // Protect dashboard routes - require authentication
+    if (request.nextUrl.pathname.startsWith('/dashboard/merchant') ||
+        request.nextUrl.pathname.startsWith('/dashboard/admin')) {
+        if (!token) {
+            // Redirect to login if not authenticated
+            const loginUrl = new URL('/login', request.url);
+            loginUrl.searchParams.set('callbackUrl', request.url);
+            return NextResponse.redirect(loginUrl);
+        }
+    }
+
+    return NextResponse.next();
+}
+
 export const config = {
     matcher: [
-        "/dashboard/merchant/:path*",
-        "/dashboard/admin/:path*",
+        '/dashboard/merchant/:path*',
+        '/dashboard/admin/:path*',
     ]
 };
