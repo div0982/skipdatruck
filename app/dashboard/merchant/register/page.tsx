@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Loader2, Truck, MapPin, Building2 } from 'lucide-react';
-import { saveTruckId } from '@/lib/truck-storage';
 
 interface Province {
     value: string;
@@ -28,6 +28,7 @@ const PROVINCES: Province[] = [
 
 export default function RegisterTruckPage() {
     const router = useRouter();
+    const { data: session, status } = useSession();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
@@ -35,39 +36,33 @@ export default function RegisterTruckPage() {
         description: '',
         address: '',
         province: 'ON',
-        ownerName: '',
-        ownerEmail: '',
     });
+
+    // Redirect if not authenticated
+    useEffect(() => {
+        if (status === 'unauthenticated') {
+            router.push('/login');
+        }
+    }, [status, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setLoading(true);
 
+        if (!session?.user?.id) {
+            setError('You must be logged in to register a truck');
+            setLoading(false);
+            return;
+        }
+
         try {
-            // First, create or get a demo user
-            const userResponse = await fetch('/api/users/demo', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: formData.ownerName || 'Demo Owner',
-                    email: formData.ownerEmail || `demo-${Date.now()}@foodtruck.local`,
-                }),
-            });
-
-            if (!userResponse.ok) {
-                const errorData = await userResponse.json();
-                throw new Error(errorData.error || 'Failed to create user');
-            }
-
-            const user = await userResponse.json();
-
-            // Then create the truck
+            // Create the truck with authenticated user's ID
             const truckResponse = await fetch('/api/trucks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    ownerId: user.id,
+                    ownerId: session.user.id, // Use logged-in user's ID
                     name: formData.name,
                     description: formData.description,
                     address: formData.address,
@@ -82,16 +77,22 @@ export default function RegisterTruckPage() {
 
             const truck = await truckResponse.json();
 
-            // Save truckId to localStorage
-            saveTruckId(truck.id);
-
-            // Redirect to dashboard
-            router.push(`/dashboard/merchant?truckId=${truck.id}`);
+            // Redirect to dashboard (no truck ID in URL)
+            router.push('/dashboard/merchant');
+            router.refresh();
         } catch (err: any) {
             setError(err.message || 'Failed to register truck');
             setLoading(false);
         }
     };
+
+    if (status === 'loading') {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 py-12 px-4">
@@ -183,46 +184,6 @@ export default function RegisterTruckPage() {
                             </select>
                         </div>
 
-                        {/* Owner Info (Optional for demo) */}
-                        <div className="border-t pt-6">
-                            <h3 className="text-sm font-medium text-gray-700 mb-4">
-                                Owner Information (Optional)
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Owner Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.ownerName}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, ownerName: e.target.value })
-                                        }
-                                        placeholder="Your name"
-                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-400 focus:outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Owner Email
-                                    </label>
-                                    <input
-                                        type="email"
-                                        value={formData.ownerEmail}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, ownerEmail: e.target.value })
-                                        }
-                                        placeholder="your@email.com"
-                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-400 focus:outline-none"
-                                    />
-                                </div>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                                If not provided, a demo account will be created automatically
-                            </p>
-                        </div>
-
                         {error && (
                             <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
                                 <p className="text-sm text-red-800">{error}</p>
@@ -252,4 +213,3 @@ export default function RegisterTruckPage() {
         </div>
     );
 }
-
