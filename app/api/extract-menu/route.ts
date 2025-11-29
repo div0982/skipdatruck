@@ -69,13 +69,13 @@ Prices must be numbers without currency symbols.`;
             } catch (apiError: any) {
                 lastError = apiError;
                 console.error(`Model ${modelName} failed:`, apiError.message);
-                
+
                 // If it's a rate limit, retry this model with backoff
-                const isRateLimit = apiError.message?.includes('429') || 
-                                   apiError.message?.includes('quota') || 
-                                   apiError.message?.includes('Too Many Requests') ||
-                                   apiError.message?.includes('rate limit');
-                
+                const isRateLimit = apiError.message?.includes('429') ||
+                    apiError.message?.includes('quota') ||
+                    apiError.message?.includes('Too Many Requests') ||
+                    apiError.message?.includes('rate limit');
+
                 if (isRateLimit) {
                     // Retry this model with exponential backoff
                     const maxRetries = 3;
@@ -83,7 +83,7 @@ Prices must be numbers without currency symbols.`;
                         const waitTime = Math.pow(2, attempt) * 1000;
                         console.log(`Rate limited on ${modelName}, retrying after ${waitTime}ms...`);
                         await new Promise(resolve => setTimeout(resolve, waitTime));
-                        
+
                         try {
                             response = await ai.models.generateContent({
                                 model: modelName,
@@ -109,17 +109,17 @@ Prices must be numbers without currency symbols.`;
                     }
                     if (response) break; // Success after retry
                 }
-                
+
                 // If it's a model not found error, try next model
-                const isModelNotFound = apiError.message?.includes('404') || 
-                                       apiError.message?.includes('not found') || 
-                                       apiError.message?.includes('Model') ||
-                                       apiError.message?.includes('model');
-                
+                const isModelNotFound = apiError.message?.includes('404') ||
+                    apiError.message?.includes('not found') ||
+                    apiError.message?.includes('Model') ||
+                    apiError.message?.includes('model');
+
                 if (isModelNotFound) {
                     continue; // Try next model
                 }
-                
+
                 // For other errors, throw immediately
                 throw apiError;
             }
@@ -130,6 +130,11 @@ Prices must be numbers without currency symbols.`;
         }
 
         const text = response.text;
+
+        if (!text) {
+            throw new Error('No response text from AI model');
+        }
+
         console.log('Gemini response received');
 
         let cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
