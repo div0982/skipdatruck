@@ -30,8 +30,21 @@ export default function LoginPage() {
                 return;
             }
 
-            // Redirect to merchant dashboard
-            router.push('/dashboard/merchant');
+            // Fetch user's trucks to redirect to their dashboard
+            const trucksResponse = await fetch('/api/trucks');
+            if (trucksResponse.ok) {
+                const trucks = await trucksResponse.json();
+                if (trucks && trucks.length > 0) {
+                    // Redirect to dashboard with their first truck
+                    router.push(`/dashboard/merchant?truckId=${trucks[0].id}`);
+                } else {
+                    // No trucks yet, redirect to registration
+                    router.push('/dashboard/merchant/register');
+                }
+            } else {
+                // Fallback to dashboard
+                router.push('/dashboard/merchant');
+            }
             router.refresh();
         } catch (err) {
             setError('Something went wrong');

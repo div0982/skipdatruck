@@ -40,16 +40,16 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/dashboard/merchant"
+              href="/login"
               className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all"
             >
-              Merchant Dashboard
+              Merchant Login
             </Link>
             <Link
-              href="/dashboard/admin"
+              href="/signup"
               className="bg-white hover:bg-gray-50 text-purple-600 font-semibold px-8 py-4 rounded-2xl border-2 border-purple-200 hover:border-purple-300 transition-all"
             >
-              Admin Dashboard
+              Sign Up Free
             </Link>
           </div>
         </div>

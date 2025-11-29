@@ -1,16 +1,22 @@
-// Food Trucks API
-// Get all trucks or create new truck
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getTaxRate } from '@/lib/tax-calculator';
 import { Province } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
-// Get all food trucks
+// Get all food trucks (or user's trucks if authenticated)
 export async function GET() {
     try {
+        const session = await getServerSession(authOptions);
+
+        // If authenticated, return only their trucks
+        const whereClause = session?.user?.id
+            ? { isActive: true, ownerId: session.user.id }
+            : { isActive: true };
+
         const trucks = await prisma.foodTruck.findMany({
-            where: { isActive: true },
+            where: whereClause,
             include: {
                 owner: {
                     select: {
