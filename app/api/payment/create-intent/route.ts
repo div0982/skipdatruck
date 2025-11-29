@@ -113,6 +113,7 @@ export async function POST(req: NextRequest) {
 
         // Create Stripe Payment Intent
         const paymentIntentData: any = {
+            // Customer pays full amount including platform fee
             amount: toStripeCents(total),
             currency: 'cad',
             metadata: {
@@ -133,14 +134,14 @@ export async function POST(req: NextRequest) {
 
         // Add Connect-specific fields only if using Stripe Connect
         if (useStripeConnect) {
-            // With controller.fees.payer='account', the connected account pays Stripe fees
-            // So we CANNOT specify transfer_data.amount - Stripe calculates it automatically
-            // Formula: transfer = total - application_fee - stripe_fee (auto-calculated)
+            // Use on_behalf_of to make the MERCHANT pay Stripe fees
+            // This creates a "direct charge" instead of "destination charge"
+            paymentIntentData.on_behalf_of = truck.owner.stripeConnectId;
             paymentIntentData.application_fee_amount = toStripeCents(platformFee);
-            paymentIntentData.transfer_data = {
-                destination: truck.owner.stripeConnectId,
-                // DO NOT add amount here - it conflicts with controller.fees.payer='account'
-            };
+
+            // Merchant receives: (subtotal + tax) - stripe_fee
+            // Platform receives: platformFee (via application_fee_amount)
+            // Stripe fees are charged to the connected account (merchant)
         }
 
         const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
