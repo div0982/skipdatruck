@@ -1,0 +1,160 @@
+// Prisma schema for QR Food Truck Ordering Platform
+// PRODUCTION VERSION - PostgreSQL for Vercel deployment
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - supports admin, truck_owner, and customer roles
+model User {
+  id                String      @id @default(uuid())
+  email             String      @unique
+  password          String
+  role              UserRole    @default(CUSTOMER)
+  name              String?
+  phone             String?
+  
+  // Stripe Connect info for truck owners
+  stripeConnectId   String?     @unique
+  stripeOnboarded   Boolean     @default(false)
+  
+  // Relations
+  ownedTrucks       FoodTruck[]
+  orders            Order[]
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  @@index([email])
+}
+
+enum UserRole {
+  ADMIN
+  TRUCK_OWNER
+  CUSTOMER
+}
+
+// Food Truck model
+model FoodTruck {
+  id                String      @id @default(uuid())
+  ownerId           String
+  owner             User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  name              String
+  description       String?
+  address           String
+  province          Province
+  
+  // Tax rate for this province (HST/GST/PST)
+  taxRate           Float       @default(0.13)
+  
+  // Branding
+  logoUrl           String?
+  bannerUrl         String?
+  
+  // QR Code data
+  qrCodeUrl         String?
+  
+  // Status
+  isActive          Boolean     @default(true)
+  
+  // Relations
+  menuItems         MenuItem[]
+  orders            Order[]
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  @@index([ownerId])
+}
+
+enum Province {
+  AB  // Alberta - 5% GST
+  BC  // British Columbia - 5% GST + 7% PST = 12%
+  MB  // Manitoba - 5% GST + 7% PST = 12%
+  NB  // New Brunswick - 15% HST
+  NL  // Newfoundland - 15% HST
+  NT  // Northwest Territories - 5% GST
+  NS  // Nova Scotia - 15% HST
+  NU  // Nunavut - 5% GST
+  ON  // Ontario - 13% HST
+  PE  // Prince Edward Island - 15% HST
+  QC  // Quebec - 5% GST + 9.975% QST = 14.975%
+  SK  // Saskatchewan - 5% GST + 6% PST = 11%
+  YT  // Yukon - 5% GST
+}
+
+// Menu Item model
+model MenuItem {
+  id                String      @id @default(uuid())
+  truckId           String
+  truck             FoodTruck   @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  
+  name              String
+  description       String?
+  price             Float       // In CAD
+  category          String
+  imageUrl          String?
+  
+  isAvailable       Boolean     @default(true)
+  sortOrder         Int         @default(0)
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  @@index([truckId, category])
+}
+
+// Order model
+model Order {
+  id                String      @id @default(uuid())
+  orderNumber       String      @unique // Human-readable order number
+  
+  // Relations
+  truckId           String
+  truck             FoodTruck   @relation(fields: [truckId], references: [id])
+  userId            String?
+  user              User?       @relation(fields: [userId], references: [id])
+  
+  // Customer info (for guest checkouts)
+  customerName      String?
+  customerEmail     String?
+  customerPhone     String?
+  
+  // Order items (stored as JSON)
+  items             Json        // [{ menuItemId, name, price, quantity }]
+  
+  // Pricing breakdown (all in CAD)
+  subtotal          Float       // Sum of items
+  tax               Float       // Based on province
+  platformFee       Float       // 4% + $0.10
+  total             Float       // subtotal + tax + platformFee
+  
+  // Stripe info
+  stripePaymentId   String?     @unique
+  stripeStatus      String?     // payment_intent status
+  
+  // Order status
+  status            OrderStatus @default(PENDING)
+  
+  // Timestamps
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  completedAt       DateTime?
+  
+  @@index([truckId, status])
+  @@index([orderNumber])
+}
+
+enum OrderStatus {
+  PENDING       // Payment received, waiting to be acknowledged
+  PREPARING     // Truck is preparing the order
+  READY         // Order is ready for pickup
+  COMPLETED     // Order has been picked up
+  CANCELLED     // Order was cancelled
+}

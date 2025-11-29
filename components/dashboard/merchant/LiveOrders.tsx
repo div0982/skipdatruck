@@ -1,0 +1,214 @@
+'use client';
+
+// Live Orders Component with realtime updates
+import { useEffect, useState } from 'react';
+import { Order } from '@prisma/client';
+import { formatCurrency } from '@/lib/utils';
+import { Clock, ChefHat, CheckCircle, XCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface LiveOrdersProps {
+    truckId: string;
+}
+
+export default function LiveOrders({ truckId }: LiveOrdersProps) {
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch and poll for orders
+    useEffect(() => {
+        fetchOrders();
+
+        const interval = setInterval(fetchOrders, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(interval);
+    }, [truckId]);
+
+    const fetchOrders = async () => {
+        try {
+            const response = await fetch(`/api/orders?truckId=${truckId}&status=PENDING,PREPARING,READY`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch orders');
+            }
+            const data = await response.json();
+            setOrders(data);
+            setLoading(false);
+        } catch (error) {
+            console.error('Failed to fetch orders:', error);
+            setLoading(false);
+        }
+    };
+
+    const updateOrderStatus = async (orderId: string, status: string) => {
+        try {
+            await fetch('/api/orders', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, status }),
+            });
+
+            // Play sound notification
+            playNotificationSound();
+
+            fetchOrders();
+        } catch (error) {
+            console.error('Failed to update order:', error);
+        }
+    };
+
+    const playNotificationSound = () => {
+        // Simple beep (you can replace with actual sound file)
+        const audio = new Audio('/notification.mp3');
+        audio.play().catch(() => { }); // Ignore errors if sound file doesn't exist
+    };
+
+    const getStatusConfig = (status: string) => {
+        switch (status) {
+            case 'PENDING':
+                return {
+                    icon: Clock,
+                    label: 'New Order',
+                    color: 'text-blue-600',
+                    bgColor: 'bg-blue-50',
+                    borderColor: 'border-blue-200',
+                };
+            case 'PREPARING':
+                return {
+                    icon: ChefHat,
+                    label: 'Preparing',
+                    color: 'text-orange-600',
+                    bgColor: 'bg-orange-50',
+                    borderColor: 'border-orange-200',
+                };
+            case 'READY':
+                return {
+                    icon: CheckCircle,
+                    label: 'Ready',
+                    color: 'text-green-600',
+                    bgColor: 'bg-green-50',
+                    borderColor: 'border-green-200',
+                };
+            default:
+                return {
+                    icon: XCircle,
+                    label: status,
+                    color: 'text-gray-600',
+                    bgColor: 'bg-gray-50',
+                    borderColor: 'border-gray-200',
+                };
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-xl p-6 border border-gray-200">
+                <h2 className="text-lg font-bold mb-4">Live Orders</h2>
+                <div className="text-center py-8 text-gray-500">Loading orders...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white rounded-xl p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold">Live Orders</h2>
+                <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-sm text-gray-600">Live</span>
+                </div>
+            </div>
+
+            {orders.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                    <p>No active orders</p>
+                    <p className="text-sm mt-2">New orders will appear here</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {orders.map((order) => {
+                        const items = order.items as Array<{ name: string; quantity: number; price: number }>;
+                        const config = getStatusConfig(order.status);
+                        const Icon = config.icon;
+
+                        return (
+                            <div
+                                key={order.id}
+                                className={cn(
+                                    'p-4 rounded-xl border-2 transition-all',
+                                    config.borderColor,
+                                    config.bgColor
+                                )}
+                            >
+                                {/* Header */}
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn('w-10 h-10 rounded-full bg-white flex items-center justify-center', config.color)}>
+                                            <Icon className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-gray-900">{order.orderNumber}</h3>
+                                            <p className="text-sm text-gray-600">
+                                                {new Date(order.createdAt).toLocaleTimeString('en-CA', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className={cn('px-3 py-1 rounded-full text-sm font-semibold', config.color, 'bg-white')}>
+                                        {config.label}
+                                    </span>
+                                </div>
+
+                                {/* Items */}
+                                <div className="mb-3 space-y-1">
+                                    {items.map((item, idx) => (
+                                        <p key={idx} className="text-sm text-gray-700">
+                                            {item.quantity}x {item.name}
+                                        </p>
+                                    ))}
+                                </div>
+
+                                {/* Total */}
+                                <div className="flex items-center justify-between mb-4 pt-3 border-t border-gray-200">
+                                    <span className="text-sm font-medium text-gray-600">Total</span>
+                                    <span className="text-lg font-bold text-gray-900">
+                                        {formatCurrency(order.total)}
+                                    </span>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex gap-2">
+                                    {order.status === 'PENDING' && (
+                                        <button
+                                            onClick={() => updateOrderStatus(order.id, 'PREPARING')}
+                                            className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                                        >
+                                            Start Preparing
+                                        </button>
+                                    )}
+                                    {order.status === 'PREPARING' && (
+                                        <button
+                                            onClick={() => updateOrderStatus(order.id, 'READY')}
+                                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                                        >
+                                            Mark as Ready
+                                        </button>
+                                    )}
+                                    {order.status === 'READY' && (
+                                        <button
+                                            onClick={() => updateOrderStatus(order.id, 'COMPLETED')}
+                                            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                                        >
+                                            Complete Order
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
