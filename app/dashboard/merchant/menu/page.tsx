@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Upload, Type, Loader2, CheckCircle, XCircle, Image as ImageIcon, Sparkles, ArrowLeft } from 'lucide-react';
 import { getTruckId } from '@/lib/truck-storage';
@@ -15,7 +15,7 @@ interface ExtractedItem {
 
 type UploadMode = 'image' | 'text' | null;
 
-export default function MenuUploadPage() {
+function MenuUploadContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [truckId, setTruckId] = useState<string | null>(null);
@@ -436,3 +436,14 @@ Fries - $4.99"
     );
 }
 
+export default function MenuUploadPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <Loader2 className="w-12 h-12 animate-spin text-purple-600" />
+            </div>
+        }>
+            <MenuUploadContent />
+        </Suspense>
+    );
+}
