@@ -8,45 +8,62 @@ import TruckHeader from '@/components/truck/TruckHeader';
 import CartProvider from '@/components/cart/CartProvider';
 import CartDrawer from '@/components/cart/CartDrawer';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default async function TruckPage({ params }: { params: Promise<{ id: string }> }) {
-    // In Next.js 16, params is a Promise and must be awaited
-    const { id } = await params;
-    
-    const truck = await prisma.foodTruck.findUnique({
-        where: { id, isActive: true },
-        include: {
-            menuItems: {
-                where: { isAvailable: true },
-                orderBy: { sortOrder: 'asc' },
+    try {
+        // In Next.js 16, params is a Promise and must be awaited
+        const { id } = await params;
+
+        const truck = await prisma.foodTruck.findUnique({
+            where: { id, isActive: true },
+            include: {
+                menuItems: {
+                    where: { isAvailable: true },
+                    orderBy: { sortOrder: 'asc' },
+                },
             },
-        },
-    });
+        });
 
-    if (!truck) {
-        notFound();
-    }
+        if (!truck) {
+            notFound();
+        }
 
-    // Group items by category
-    const categories = [...new Set(truck.menuItems.map(item => item.category))];
+        // Group items by category
+        const categories = [...new Set(truck.menuItems.map(item => item.category))];
 
-    return (
-        <CartProvider truck={truck}>
-            <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-24">
-                <TruckHeader truck={truck} />
-                <MenuBrowser
-                    menuItems={truck.menuItems}
-                    categories={categories}
-                    truckId={truck.id}
-                />
-                <CartDrawer truck={truck} />
+        return (
+            <CartProvider truck={truck}>
+                <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-24">
+                    <TruckHeader truck={truck} />
+                    <MenuBrowser
+                        menuItems={truck.menuItems}
+                        categories={categories}
+                        truckId={truck.id}
+                    />
+                    <CartDrawer truck={truck} />
+                </div>
+            </CartProvider>
+        );
+    } catch (error: any) {
+        console.error('Error loading truck menu:', error);
+        return (
+            <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+                <div className="max-w-md w-full bg-red-50 border border-red-200 rounded-xl p-6">
+                    <h2 className="text-xl font-bold text-red-900 mb-2">Error Loading Menu</h2>
+                    <p className="text-red-800">
+                        Unable to load the menu. Please try again later.
+                    </p>
+                </div>
             </div>
-        </CartProvider>
-    );
+        );
+    }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    
+
     const truck = await prisma.foodTruck.findUnique({
         where: { id },
     });
