@@ -46,22 +46,7 @@ export async function POST(req: NextRequest) {
         // Create Connect account if doesn't exist
         if (!accountId) {
             const account = await stripe.accounts.create({
-                // Using controller pattern (new Stripe best practice)
-                // No top-level "type" property
-                controller: {
-                    // Connected account pays Stripe processing fees
-                    fees: {
-                        payer: 'account'
-                    },
-                    // Stripe handles payment disputes and losses
-                    losses: {
-                        payments: 'stripe'
-                    },
-                    // Connected account gets full access to Stripe dashboard
-                    stripe_dashboard: {
-                        type: 'full'
-                    }
-                },
+                type: 'express',
                 email,
                 country: 'CA',
                 capabilities: {
