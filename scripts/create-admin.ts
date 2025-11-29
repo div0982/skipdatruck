@@ -1,23 +1,29 @@
-// Create Admin User Script
+// Create Admin User in Production
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+    datasources: {
+        db: {
+            url: process.env.DATABASE_URL,
+        },
+    },
+});
 
 async function createAdmin() {
     try {
-        // Check if admin already exists
-        const existing = await prisma.user.findUnique({
+        console.log('Connecting to database...');
+        console.log('Database URL:', process.env.DATABASE_URL?.substring(0, 50) + '...');
+
+        // Delete existing admin if exists
+        await prisma.user.deleteMany({
             where: { email: 'diveshasenthil@gmail.com' },
         });
-
-        if (existing) {
-            console.log('Admin user already exists!');
-            return;
-        }
+        console.log('Deleted any existing admin user');
 
         // Hash password
         const hashedPassword = await bcrypt.hash('diveshmaster', 10);
+        console.log('Password hashed');
 
         // Create admin user
         const admin = await prisma.user.create({
@@ -32,8 +38,9 @@ async function createAdmin() {
         console.log('✅ Admin user created successfully!');
         console.log('Email:', admin.email);
         console.log('Role:', admin.role);
+        console.log('ID:', admin.id);
     } catch (error) {
-        console.error('Error creating admin:', error);
+        console.error('❌ Error creating admin:', error);
     } finally {
         await prisma.$disconnect();
     }

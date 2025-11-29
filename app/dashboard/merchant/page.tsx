@@ -1,25 +1,41 @@
-// Merchant Dashboard - Main page for truck owners
+// Merchant Dashboard - Session-based (no truck ID in URL)
 import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import LiveOrders from '@/components/dashboard/merchant/LiveOrders';
 import DashboardStats from '@/components/dashboard/merchant/DashboardStats';
 
-// This is a simplified version - in production, you'd have proper auth
-export default async function MerchantDashboard({ 
-    searchParams 
-}: { 
-    searchParams: Promise<{ truckId?: string }>
-}) {
-    // In Next.js 16, searchParams is a Promise and must be awaited
-    const params = await searchParams;
-    const truckId = params.truckId;
+export default async function MerchantDashboard() {
+    // Get session
+    const session = await getServerSession(authOptions);
 
-    // Debug logging
-    console.log('[Merchant Dashboard] Raw searchParams:', params);
-    console.log('[Merchant Dashboard] truckId extracted:', truckId);
+    if (!session?.user?.id) {
+        redirect('/login');
+    }
 
-    if (!truckId) {
-        // Show registration prompt with button
+    // Fetch user's trucks
+    const trucks = await prisma.foodTruck.findMany({
+        where: {
+            ownerId: session.user.id,
+            isActive: true,
+        },
+        include: {
+            owner: true,
+            _count: {
+                select: {
+                    orders: true,
+                    menuItems: true,
+                },
+            },
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
+    });
+
+    // If no trucks, redirect to registration
+    if (!trucks || trucks.length === 0) {
         return (
             <div className="min-h-screen bg-gray-50 p-6">
                 <div className="max-w-4xl mx-auto">
@@ -42,9 +58,6 @@ export default async function MerchantDashboard({
                             <p className="text-yellow-800 text-center">
                                 No truck registered yet. Click the button below to register a new food truck.
                             </p>
-                            <p className="text-sm text-yellow-700 mt-2 text-center">
-                                Your truck ID will be saved in your browser for easy access.
-                            </p>
                         </div>
 
                         <a
@@ -59,65 +72,8 @@ export default async function MerchantDashboard({
         );
     }
 
-    let truck;
-    try {
-        truck = await prisma.foodTruck.findUnique({
-            where: { id: truckId },
-            include: {
-                owner: true,
-                _count: {
-                    select: {
-                        orders: true,
-                        menuItems: true,
-                    },
-                },
-            },
-        });
-        console.log('Merchant Dashboard - Truck found:', truck ? truck.name : 'null');
-    } catch (error) {
-        console.error('Merchant Dashboard - Database error:', error);
-        return (
-            <div className="min-h-screen bg-gray-50 p-6">
-                <div className="max-w-4xl mx-auto">
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-                        <h2 className="text-xl font-bold text-red-900 mb-2">Database Error</h2>
-                        <p className="text-red-800">Failed to fetch truck from database. Please check your database connection.</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (!truck) {
-        return (
-            <div className="min-h-screen bg-gray-50 p-6">
-                <div className="max-w-4xl mx-auto">
-                    <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
-                            <h2 className="text-xl font-bold text-red-900 mb-2">Truck Not Found</h2>
-                            <p className="text-red-800 mb-4">
-                                The truck with ID <code className="bg-red-100 px-2 py-1 rounded">{truckId}</code> was not found in the database.
-                            </p>
-                            <p className="text-sm text-red-700 mb-4">
-                                This might happen if:
-                            </p>
-                            <ul className="list-disc list-inside text-sm text-red-700 mb-4 space-y-1">
-                                <li>The truck was deleted</li>
-                                <li>The truck ID is incorrect</li>
-                                <li>The database was reset</li>
-                            </ul>
-                            <a
-                                href="/dashboard/merchant/register"
-                                className="inline-block px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all"
-                            >
-                                Register a New Food Truck
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    // Use first truck
+    const truck = trucks[0];
 
     // Get today's orders
     const today = new Date();
@@ -171,7 +127,7 @@ export default async function MerchantDashboard({
                 {/* Quick Links */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <a
-                        href={`/dashboard/merchant/menu?truckId=${truck.id}`}
+                        href="/dashboard/merchant/menu"
                         className="bg-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all"
                     >
                         <h3 className="font-semibold text-gray-900 mb-2">Add Menu Items</h3>
@@ -188,7 +144,7 @@ export default async function MerchantDashboard({
                     </a>
 
                     <a
-                        href={`/dashboard/merchant/qr?truckId=${truck.id}`}
+                        href="/dashboard/merchant/qr"
                         className="bg-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all"
                     >
                         <h3 className="font-semibold text-gray-900 mb-2">QR Code</h3>
