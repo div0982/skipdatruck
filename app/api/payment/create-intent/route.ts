@@ -128,9 +128,38 @@ export async function POST(req: NextRequest) {
                 merchantPayout: merchantPayout.toFixed(2),
             },
             automatic_payment_methods: {
-                where: { id: order.id },
-                data: { stripePaymentId: paymentIntent.id },
-            });
+                enabled: true,
+            },
+        };
+
+        // Add Connect-specific fields only if using Stripe Connect
+        if (useStripeConnect) {
+            // Use destination charges with specific transfer amount
+            // This makes Stripe charge fees ONLY on the transfer amount (subtotal + tax)
+            // NOT on the application fee (platform fee)
+
+            const transferAmount = subtotal + tax; // $17.25 - merchant's portion
+
+            paymentIntentData.application_fee_amount = toStripeCents(platformFee); // $0.70 to platform
+            paymentIntentData.transfer_data = {
+                destination: truck.owner.stripeConnectId,
+                amount: toStripeCents(transferAmount), // Merchant gets this amount, pays fees on it
+            };
+
+            // Result:
+            // - Customer pays: $17.95 (subtotal + tax + platformFee)
+            // - Merchant receives transfer: $17.25 (subtotal + tax)
+            // - Merchant pays Stripe fees on: $17.25 only (~$0.80)
+            // - Platform receives: $0.70 (no Stripe fees on this!)
+        }
+
+        const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
+
+        // Update order with payment intent ID
+        await prisma.order.update({
+            where: { id: order.id },
+            data: { stripePaymentId: paymentIntent.id },
+        });
 
         return NextResponse.json({
             clientSecret: paymentIntent.client_secret,
