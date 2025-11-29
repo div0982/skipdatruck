@@ -30,6 +30,19 @@ export default function LoginPage() {
                 return;
             }
 
+            // Fetch user session to check role
+            const sessionResponse = await fetch('/api/auth/session');
+            if (sessionResponse.ok) {
+                const session = await sessionResponse.json();
+
+                // Admin users go to admin dashboard
+                if (session?.user?.role === 'ADMIN') {
+                    router.push('/dashboard/admin');
+                    router.refresh();
+                    return;
+                }
+            }
+
             // Fetch user's trucks to redirect to their dashboard
             const trucksResponse = await fetch('/api/trucks');
             if (trucksResponse.ok) {
