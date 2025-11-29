@@ -94,8 +94,8 @@ export async function POST(req: NextRequest) {
         // Create account link for onboarding
         const accountLink = await stripe.accountLinks.create({
             account: accountId,
-            refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/merchant/connect/refresh`,
-            return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/merchant/connect/success`,
+            refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/merchant`,
+            return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/merchant`,
             type: 'account_onboarding',
         });
 
