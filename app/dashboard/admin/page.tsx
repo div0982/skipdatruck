@@ -4,6 +4,9 @@ import { formatCurrency } from '@/lib/utils';
 import { TrendingUp, Users, ShoppingBag, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 
+// Force dynamic rendering - don't try to build this at build time
+export const dynamic = 'force-dynamic';
+
 export default async function AdminDashboard() {
     // Get stats
     const totalTrucks = await prisma.foodTruck.count({ where: { isActive: true } });
@@ -141,8 +144,8 @@ export default async function AdminDashboard() {
                                     </div>
                                     <div className="text-right">
                                         <div className={`px-2 py-1 rounded-full text-xs font-medium ${truck.owner.stripeOnboarded
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-yellow-100 text-yellow-700'
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-yellow-100 text-yellow-700'
                                             }`}>
                                             {truck.owner.stripeOnboarded ? 'Active' : 'Pending'}
                                         </div>

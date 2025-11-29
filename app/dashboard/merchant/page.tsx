@@ -6,6 +6,9 @@ import { prisma } from '@/lib/db';
 import LiveOrders from '@/components/dashboard/merchant/LiveOrders';
 import DashboardStats from '@/components/dashboard/merchant/DashboardStats';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default async function MerchantDashboard() {
     // Get session
     const session = await getServerSession(authOptions);
