@@ -30,6 +30,9 @@ export default function LoginPage() {
                 return;
             }
 
+            // Small delay to ensure session is created
+            await new Promise(resolve => setTimeout(resolve, 500));
+
             // Fetch user session to check role
             const sessionResponse = await fetch('/api/auth/session');
             if (sessionResponse.ok) {
