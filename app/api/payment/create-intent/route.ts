@@ -133,10 +133,13 @@ export async function POST(req: NextRequest) {
 
         // Add Connect-specific fields only if using Stripe Connect
         if (useStripeConnect) {
+            // With controller.fees.payer='account', the connected account pays Stripe fees
+            // So we CANNOT specify transfer_data.amount - Stripe calculates it automatically
+            // Formula: transfer = total - application_fee - stripe_fee (auto-calculated)
             paymentIntentData.application_fee_amount = toStripeCents(platformFee);
             paymentIntentData.transfer_data = {
                 destination: truck.owner.stripeConnectId,
-                amount: toStripeCents(merchantPayout),
+                // DO NOT add amount here - it conflicts with controller.fees.payer='account'
             };
         }
 
