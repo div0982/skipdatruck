@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import LiveOrders from '@/components/dashboard/merchant/LiveOrders';
 import DashboardStats from '@/components/dashboard/merchant/DashboardStats';
 import StripeConnectButton from '@/components/stripe/StripeConnectButton';
+import StripeDashboardButton from '@/components/stripe/StripeDashboardButton';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -171,6 +172,10 @@ export default async function MerchantDashboard() {
                             <h3 className="font-semibold text-gray-900 mb-2">QR Code</h3>
                             <p className="text-sm text-gray-600">Download your QR code</p>
                         </a>
+
+                        {truck.owner.stripeOnboarded && (
+                            <StripeDashboardButton userId={truck.owner.id} />
+                        )}
                     </div>
                 </div>
             </div>
