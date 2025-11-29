@@ -2,8 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { Loader2, CheckCircle, XCircle, Type, Sparkles } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { getTruckId } from '@/lib/truck-storage';
+import { useRouter } from 'next/navigation';
 
 interface ExtractedItem {
     name: string;
@@ -14,7 +13,6 @@ interface ExtractedItem {
 
 function TextMenuParserContent() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [menuText, setMenuText] = useState('');
     const [parsing, setParsing] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -24,21 +22,22 @@ function TextMenuParserContent() {
     const [truckId, setTruckId] = useState<string | null>(null);
 
     useEffect(() => {
-        // Check URL params first, then localStorage
-        const urlTruckId = searchParams.get('truckId');
-        const storedTruckId = getTruckId();
-        const finalTruckId = urlTruckId || storedTruckId;
-
-        if (!finalTruckId) {
-            setError('Missing truckId. Please register a truck first or provide truckId in URL.');
-        } else {
-            setTruckId(finalTruckId);
-            // Update URL if we got it from localStorage
-            if (storedTruckId && !urlTruckId) {
-                router.replace(`/dashboard/merchant/parse-text?truckId=${storedTruckId}`);
+        // Fetch user's truck from API (session-based)
+        async function fetchTruck() {
+            try {
+                const response = await fetch('/api/user/truck');
+                if (response.ok) {
+                    const truck = await response.json();
+                    setTruckId(truck.id);
+                } else {
+                    setError('No truck found. Please register a truck first.');
+                }
+            } catch (err) {
+                setError('Failed to load truck. Please try again.');
             }
         }
-    }, [searchParams, router]);
+        fetchTruck();
+    }, []);
 
     const handleParse = async () => {
         if (!menuText.trim()) {

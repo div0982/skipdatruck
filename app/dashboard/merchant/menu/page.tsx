@@ -1,10 +1,8 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Upload, Type, Loader2, CheckCircle, XCircle, Image as ImageIcon, Sparkles, ArrowLeft } from 'lucide-react';
-import { getTruckId } from '@/lib/truck-storage';
-import { saveTruckId } from '@/lib/truck-storage';
 
 interface ExtractedItem {
     name: string;
@@ -17,7 +15,6 @@ type UploadMode = 'image' | 'text' | null;
 
 function MenuUploadContent() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [truckId, setTruckId] = useState<string | null>(null);
     const [mode, setMode] = useState<UploadMode>(null);
     const [uploading, setUploading] = useState(false);
@@ -30,19 +27,22 @@ function MenuUploadContent() {
     const [success, setSuccess] = useState(false);
 
     useEffect(() => {
-        const urlTruckId = searchParams.get('truckId');
-        const storedTruckId = getTruckId();
-        const finalTruckId = urlTruckId || storedTruckId;
-
-        if (!finalTruckId) {
-            setError('Missing truckId. Please register a truck first.');
-        } else {
-            setTruckId(finalTruckId);
-            if (storedTruckId && !urlTruckId) {
-                router.replace(`/dashboard/merchant/menu?truckId=${storedTruckId}`);
+        // Fetch user's truck from API (session-based)
+        async function fetchTruck() {
+            try {
+                const response = await fetch('/api/user/truck');
+                if (response.ok) {
+                    const truck = await response.json();
+                    setTruckId(truck.id);
+                } else {
+                    setError('No truck found. Please register a truck first.');
+                }
+            } catch (err) {
+                setError('Failed to load truck. Please try again.');
             }
         }
-    }, [searchParams, router]);
+        fetchTruck();
+    }, []);
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

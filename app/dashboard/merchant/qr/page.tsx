@@ -1,23 +1,15 @@
-// QR Code Download Page
-import { prisma } from '@/lib/db';
+// QR Code Download Page - Session-based
+import { redirect } from 'next/navigation';
+import { getUserTruck } from '@/lib/get-user-truck';
 import { generateTruckQRCode } from '@/lib/qr-generator';
 import QRCodeDisplay from '@/components/dashboard/merchant/QRCodeDisplay';
+import { prisma } from '@/lib/db';
 
-export default async function QRCodePage({ searchParams }: {
-    searchParams: Promise<{ truckId?: string }>
-}) {
-    const params = await searchParams;
-    
-    if (!params.truckId) {
-        return <div>Missing truckId</div>;
-    }
-
-    const truck = await prisma.foodTruck.findUnique({
-        where: { id: params.truckId },
-    });
+export default async function QRCodePage() {
+    const truck = await getUserTruck();
 
     if (!truck) {
-        return <div>Truck not found</div>;
+        redirect('/dashboard/merchant/register');
     }
 
     // Generate QR code
