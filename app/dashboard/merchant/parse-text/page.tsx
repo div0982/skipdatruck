@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Loader2, CheckCircle, XCircle, Type, Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getTruckId } from '@/lib/truck-storage';
@@ -12,7 +12,7 @@ interface ExtractedItem {
     category: string;
 }
 
-export default function TextMenuParserPage() {
+function TextMenuParserContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [menuText, setMenuText] = useState('');
@@ -60,7 +60,7 @@ export default function TextMenuParserPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                const errorMsg = data.details 
+                const errorMsg = data.details
                     ? `${data.error || 'Failed to parse menu text'}: ${data.details}`
                     : data.error || 'Failed to parse menu text';
                 throw new Error(errorMsg);
@@ -262,5 +262,17 @@ Fries - $4.99"
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function TextMenuParserPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <Loader2 className="w-12 h-12 animate-spin text-purple-600" />
+            </div>
+        }>
+            <TextMenuParserContent />
+        </Suspense>
     );
 }
