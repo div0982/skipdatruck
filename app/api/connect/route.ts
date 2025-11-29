@@ -9,7 +9,7 @@ import { prisma } from '@/lib/db';
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { userId, email } = body;
+        const { userId, email, truckId } = body;
 
         if (!userId || !email) {
             return NextResponse.json(
@@ -30,17 +30,55 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // Get truck info for metadata
+        let truckName = 'Food Truck';
+        if (truckId) {
+            const truck = await prisma.foodTruck.findUnique({
+                where: { id: truckId },
+            });
+            if (truck) {
+                truckName = truck.name;
+            }
+        }
+
         let accountId = user.stripeConnectId;
 
         // Create Connect account if doesn't exist
         if (!accountId) {
             const account = await stripe.accounts.create({
-                type: 'express',
+                // Using controller pattern (new Stripe best practice)
+                // No top-level "type" property
+                controller: {
+                    // Connected account pays Stripe processing fees
+                    fees: {
+                        payer: 'account'
+                    },
+                    // Stripe handles payment disputes and losses
+                    losses: {
+                        payments: 'stripe'
+                    },
+                    // Connected account gets full access to Stripe dashboard
+                    stripe_dashboard: {
+                        type: 'full'
+                    }
+                },
                 email,
                 country: 'CA',
                 capabilities: {
                     card_payments: { requested: true },
                     transfers: { requested: true },
+                },
+                // Add business profile so you can see truck name in Stripe Dashboard
+                business_profile: {
+                    name: truckName,
+                    support_email: email,
+                },
+                // Add metadata for easy filtering and identification
+                metadata: {
+                    truck_name: truckName,
+                    truck_id: truckId || '',
+                    user_id: userId,
+                    platform: 'food_truck_qr',
                 },
             });
 

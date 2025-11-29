@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import LiveOrders from '@/components/dashboard/merchant/LiveOrders';
 import DashboardStats from '@/components/dashboard/merchant/DashboardStats';
+import StripeConnectButton from '@/components/stripe/StripeConnectButton';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -124,6 +125,14 @@ export default async function MerchantDashboard() {
                         todayRevenue={todayRevenue}
                         totalMenuItems={truck._count.menuItems}
                     />
+
+                    {/* Stripe Connect Banner - Show if not onboarded */}
+                    {!truck.owner.stripeOnboarded && (
+                        <StripeConnectButton
+                            truckId={truck.id}
+                            truckName={truck.name}
+                        />
+                    )}
 
                     {/* Live Orders */}
                     <LiveOrders truckId={truck.id} />

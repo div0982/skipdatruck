@@ -5,7 +5,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/db';
 import { calculateTax } from '@/lib/tax-calculator';
-import { calculatePlatformFee, toStripeCents, calculateTotal } from '@/lib/fee-calculator';
+import {
+    calculatePlatformFee,
+    calculateStripeFee,
+    calculateMerchantPayout,
+    toStripeCents,
+    calculateTotal
+} from '@/lib/fee-calculator';
 import { generateOrderNumber } from '@/lib/utils';
 
 export async function POST(req: NextRequest) {
@@ -37,7 +43,7 @@ export async function POST(req: NextRequest) {
         // For testing: Allow payments without Stripe Connect
         // In production, uncomment the check below
         const useStripeConnect = truck.owner.stripeConnectId && truck.owner.stripeOnboarded;
-        
+
         // Uncomment for production:
         // if (!truck.owner.stripeConnectId || !truck.owner.stripeOnboarded) {
         //     return NextResponse.json(
@@ -57,13 +63,34 @@ export async function POST(req: NextRequest) {
         // Calculate platform fee (4% + $0.10 CAD)
         const platformFee = calculatePlatformFee(subtotal);
 
-        // Calculate total
+        // Calculate Stripe fee (applies to merchant portion: subtotal + tax)
+        const stripeFee = calculateStripeFee(subtotal, tax);
+
+        // Calculate merchant payout (subtotal + tax - stripeFee)
+        const merchantPayout = calculateMerchantPayout(subtotal, tax);
+
+        // Calculate customer total (subtotal + tax + platformFee)
         const total = calculateTotal(subtotal, tax, platformFee);
+
+        // Validation: Ensure transfer amount + app fee don't exceed charge
+        const transferAmount = merchantPayout;
+        if (Math.abs((transferAmount + platformFee) - total) > 0.01) {
+            console.error('Fee calculation error:', {
+                total,
+                transferAmount,
+                platformFee,
+                sum: transferAmount + platformFee
+            });
+            return NextResponse.json(
+                { error: 'Fee calculation error. Please contact support.' },
+                { status: 500 }
+            );
+        }
 
         // Generate order number
         const orderNumber = generateOrderNumber();
 
-        // Create order in database (stripePaymentId will be set after PaymentIntent is created)
+        // Create order in database
         const order = await prisma.order.create({
             data: {
                 orderNumber,
@@ -90,6 +117,11 @@ export async function POST(req: NextRequest) {
                 orderNumber,
                 truckId,
                 truckName: truck.name,
+                subtotal: subtotal.toFixed(2),
+                tax: tax.toFixed(2),
+                platformFee: platformFee.toFixed(2),
+                stripeFee: stripeFee.toFixed(2),
+                merchantPayout: merchantPayout.toFixed(2),
             },
             automatic_payment_methods: {
                 enabled: true,
@@ -101,6 +133,7 @@ export async function POST(req: NextRequest) {
             paymentIntentData.application_fee_amount = toStripeCents(platformFee);
             paymentIntentData.transfer_data = {
                 destination: truck.owner.stripeConnectId,
+                amount: toStripeCents(merchantPayout),
             };
         }
 
@@ -120,6 +153,8 @@ export async function POST(req: NextRequest) {
                 subtotal,
                 tax,
                 platformFee,
+                stripeFee,
+                merchantPayout,
                 total,
             },
         });
@@ -132,3 +167,4 @@ export async function POST(req: NextRequest) {
         );
     }
 }
+

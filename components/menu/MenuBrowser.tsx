@@ -198,25 +198,6 @@ export default function MenuBrowser({ menuItems, categories, truckId }: MenuBrow
                     </div>
                 </div>
             )}
-
-            {/* Floating Cart Button */}
-            {cartItemCount > 0 && (
-                <a
-                    href={`/checkout/${truckId}`}
-                    className="fixed bottom-6 right-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full px-6 py-4 shadow-2xl hover:shadow-3xl transition-all flex items-center gap-3 animate-in z-40"
-                >
-                    <div className="relative">
-                        <ShoppingCart className="w-6 h-6" />
-                        <span className="absolute -top-2 -right-2 bg-yellow-400 text-purple-900 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                            {cartItemCount}
-                        </span>
-                    </div>
-                    <div className="text-left">
-                        <div className="text-sm font-medium opacity-90">View Cart</div>
-                        <div className="text-lg font-bold">${cartTotal.toFixed(2)}</div>
-                    </div>
-                </a>
-            )}
         </div>
     );
 }
