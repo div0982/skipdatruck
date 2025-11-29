@@ -139,11 +139,19 @@ export default async function MerchantDashboard() {
                         </a>
 
                         <a
+                            href="/dashboard/merchant/menu-edit"
+                            className="bg-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all"
+                        >
+                            <h3 className="font-semibold text-gray-900 mb-2">✏️ Edit Menu</h3>
+                            <p className="text-sm text-gray-600">Update prices, descriptions, and manage items</p>
+                        </a>
+
+                        <a
                             href={`/t/${truck.id}`}
                             target="_blank"
                             className="bg-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all"
                         >
-                            <h3 className="font-semibold text-gray-900 mb-2">View Menu</h3>
+                            <h3 className="font-semibold text-gray-900 mb-2">👀 View Menu (Customer)</h3>
                             <p className="text-sm text-gray-600">See how customers see your menu</p>
                         </a>
 
