@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { formatCurrency } from '@/lib/utils';
 import { TrendingUp, Users, ShoppingBag, DollarSign } from 'lucide-react';
 import Link from 'next/link';
+import DeleteMerchantButton from '@/components/admin/DeleteMerchantButton';
 
 // Force dynamic rendering - don't try to build this at build time
 export const dynamic = 'force-dynamic';
@@ -29,6 +30,7 @@ export default async function AdminDashboard() {
         include: {
             owner: {
                 select: {
+                    id: true,
                     name: true,
                     email: true,
                     stripeOnboarded: true,
@@ -142,14 +144,21 @@ export default async function AdminDashboard() {
                                         <h3 className="font-semibold text-gray-900">{truck.name}</h3>
                                         <p className="text-sm text-gray-600">{truck.owner.email}</p>
                                     </div>
-                                    <div className="text-right">
-                                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${truck.owner.stripeOnboarded
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-yellow-100 text-yellow-700'
-                                            }`}>
-                                            {truck.owner.stripeOnboarded ? 'Active' : 'Pending'}
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-right">
+                                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${truck.owner.stripeOnboarded
+                                                ? 'bg-green-100 text-green-700'
+                                                : 'bg-yellow-100 text-yellow-700'
+                                                }`}>
+                                                {truck.owner.stripeOnboarded ? 'Active' : 'Pending'}
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">{truck._count.orders} orders</p>
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">{truck._count.orders} orders</p>
+                                        <DeleteMerchantButton
+                                            userId={truck.owner.id}
+                                            userName={truck.owner.name || ''}
+                                            userEmail={truck.owner.email}
+                                        />
                                     </div>
                                 </div>
                             ))}
