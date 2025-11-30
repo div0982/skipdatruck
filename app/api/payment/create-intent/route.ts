@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
         const taxRate = truck.taxRate;
 
         // Get merchant's business model (defaults to MERCHANT_PAYS_FEES if not set)
-        const businessModel = truck.owner.businessModel || BusinessModel.MERCHANT_PAYS_FEES;
+        // Cast Prisma's BusinessModel to our fee-calculator's BusinessModel
+        const businessModel = (truck.owner.businessModel || 'MERCHANT_PAYS_FEES') as BusinessModel;
 
         // Calculate all fees using unified fee calculator
         const feeBreakdown = calculateFees(subtotal, taxRate, businessModel);
