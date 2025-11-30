@@ -23,6 +23,9 @@ model User {
   stripeConnectId   String?     @unique
   stripeOnboarded   Boolean     @default(false)
   
+  // Business model - determines fee structure
+  businessModel     BusinessModel @default(MERCHANT_PAYS_FEES)
+  
   // Relations
   ownedTrucks       FoodTruck[]
   orders            Order[]
@@ -40,6 +43,12 @@ enum UserRole {
   TRUCK_OWNER
   CUSTOMER
 }
+
+enum BusinessModel {
+  PLATFORM_PAYS_FEES    // Platform absorbs Stripe fees, uses tier system
+  MERCHANT_PAYS_FEES    // Merchant pays Stripe fees, 3% commission
+}
+
 
 // Food Truck model
 model FoodTruck {

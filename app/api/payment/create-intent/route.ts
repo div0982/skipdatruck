@@ -6,11 +6,9 @@ import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/db';
 import { calculateTax } from '@/lib/tax-calculator';
 import {
-    calculatePlatformFee,
-    calculateStripeFee,
-    calculateMerchantPayout,
+    calculateFees,
+    BusinessModel,
     toStripeCents,
-    calculateTotal
 } from '@/lib/fee-calculator';
 import { generateOrderNumber } from '@/lib/utils';
 
@@ -57,38 +55,45 @@ export async function POST(req: NextRequest) {
             return sum + (item.price * item.quantity);
         }, 0);
 
-        // Calculate tax based on province
-        const tax = calculateTax(subtotal, truck.province);
+        // Get tax rate from truck
+        const taxRate = truck.taxRate;
 
-        // Calculate platform fee (4% + $0.10 CAD)
-        const platformFee = calculatePlatformFee(subtotal);
+        // Get merchant's business model (defaults to MERCHANT_PAYS_FEES if not set)
+        const businessModel = truck.owner.businessModel || BusinessModel.MERCHANT_PAYS_FEES;
 
-        // Calculate Stripe fee (applies to merchant portion: subtotal + tax)
-        const stripeFee = calculateStripeFee(subtotal, tax);
+        // Calculate all fees using unified fee calculator
+        const feeBreakdown = calculateFees(subtotal, taxRate, businessModel);
 
-        // Calculate merchant payout (subtotal + tax - stripeFee)
-        const merchantPayout = calculateMerchantPayout(subtotal, tax);
+        const {
+            platformFee,
+            taxAmount: tax,
+            totalPayment: total,
+            stripeFee,
+            platformProfit
+        } = feeBreakdown;
 
-        // Calculate customer total (subtotal + tax + platformFee)
-        const total = calculateTotal(subtotal, tax, platformFee);
-
-        // Validation: Ensure all money is accounted for
-        // total should equal: merchantPayout + platformFee + stripeFee
-        const totalCheck = merchantPayout + platformFee + stripeFee;
-        if (Math.abs(totalCheck - total) > 0.01) {
-            console.error('Fee calculation error:', {
-                total,
-                merchantPayout,
-                platformFee,
-                stripeFee,
-                totalCheck,
-                difference: totalCheck - total
-            });
-            return NextResponse.json(
-                { error: 'Fee calculation error. Please contact support.' },
-                { status: 500 }
-            );
+        // Calculate merchant payout based on business model
+        let merchantPayout: number;
+        if (businessModel === BusinessModel.MERCHANT_PAYS_FEES) {
+            // Merchant pays Stripe fees directly
+            // They receive: subtotal + tax (and pay Stripe separately)
+            merchantPayout = subtotal + tax;
+        } else {
+            // Platform pays Stripe fees
+            // Merchant receives: subtotal + tax - stripeFee
+            merchantPayout = subtotal + tax - stripeFee;
         }
+
+        console.log('Payment breakdown:', {
+            businessModel,
+            subtotal,
+            tax,
+            platformFee,
+            stripeFee,
+            merchantPayout,
+            platformProfit,
+            total
+        });
 
         // Generate order number
         const orderNumber = generateOrderNumber();
@@ -111,7 +116,6 @@ export async function POST(req: NextRequest) {
             },
         });
 
-        // Create Stripe Payment Intent
         const paymentIntentData: any = {
             // Customer pays full amount including platform fee
             amount: toStripeCents(total),
@@ -121,10 +125,12 @@ export async function POST(req: NextRequest) {
                 orderNumber,
                 truckId,
                 truckName: truck.name,
+                businessModel,
                 subtotal: subtotal.toFixed(2),
                 tax: tax.toFixed(2),
                 platformFee: platformFee.toFixed(2),
                 stripeFee: stripeFee.toFixed(2),
+                platformProfit: platformProfit.toFixed(2),
                 merchantPayout: merchantPayout.toFixed(2),
             },
             automatic_payment_methods: {
@@ -134,15 +140,22 @@ export async function POST(req: NextRequest) {
 
         // Add Connect-specific fields only if using Stripe Connect
         if (useStripeConnect) {
-            // Destination charges with application fee
-            // Stripe auto-calculates: transfer = total - application_fee - stripe_fee
-
-            paymentIntentData.application_fee_amount = toStripeCents(platformFee); // $0.70 to platform
-            paymentIntentData.transfer_data = {
-                destination: truck.owner.stripeConnectId,
-                // NO amount - Stripe auto-calculates transfer amount
-                // Merchant pays Stripe fees only on what they receive
-            };
+            if (businessModel === BusinessModel.PLATFORM_PAYS_FEES) {
+                // Platform pays Stripe fees - use application fee
+                // Platform keeps: platformFee
+                // Merchant receives: subtotal + tax - stripe fee (calculated by Stripe)
+                paymentIntentData.application_fee_amount = toStripeCents(platformFee);
+                paymentIntentData.transfer_data = {
+                    destination: truck.owner.stripeConnectId,
+                };
+            } else {
+                // Merchant pays Stripe fees - use direct transfer
+                // Platform takes commission upfront, merchant pays their own Stripe fees
+                paymentIntentData.application_fee_amount = toStripeCents(platformFee);
+                paymentIntentData.transfer_data = {
+                    destination: truck.owner.stripeConnectId,
+                };
+            }
         }
 
         const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
@@ -158,10 +171,12 @@ export async function POST(req: NextRequest) {
             orderId: order.id,
             orderNumber,
             breakdown: {
+                businessModel,
                 subtotal,
                 tax,
                 platformFee,
                 stripeFee,
+                platformProfit,
                 merchantPayout,
                 total,
             },

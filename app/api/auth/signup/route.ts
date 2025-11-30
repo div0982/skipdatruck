@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
     try {
-        const { email, password, name } = await request.json();
+        const { email, password, name, businessModel } = await request.json();
 
         if (!email || !password) {
             return NextResponse.json(
@@ -28,13 +28,14 @@ export async function POST(request: NextRequest) {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create user with TRUCK_OWNER role
+        // Create user with TRUCK_OWNER role and chosen business model
         const user = await prisma.user.create({
             data: {
                 email,
                 password: hashedPassword,
                 name,
                 role: 'TRUCK_OWNER', // Merchants are truck owners
+                businessModel: businessModel || 'MERCHANT_PAYS_FEES', // Default to merchant pays (recommended)
             },
         });
 
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
                 id: user.id,
                 email: user.email,
                 name: user.name,
+                businessModel: user.businessModel,
             },
         });
     } catch (error: any) {

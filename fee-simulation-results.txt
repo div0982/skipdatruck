@@ -1,0 +1,124 @@
+﻿≡ƒÄ» Dynamic Fee System - Comprehensive Testing
+
+================================================================================
+
+
+# Dynamic Fee System - Complete Profit Analysis
+
+## Test Cases ($1, $3, $5, $9, $10, $12, $15, $18, $20, $25, $30, $40, $50)
+
+| Subtotal | My Fee | Stripe Cost | Net Profit | Fee % | Tier | Status |
+|----------|--------|-------------|------------|-------|------|--------|
+| $1.00 CAD | $0.69 CAD | $0.35 CAD | $0.34 CAD | 69.0% | 1 | Γ£à PASS |
+| $3.00 CAD | $0.76 CAD | $0.42 CAD | $0.34 CAD | 25.3% | 1 | Γ£à PASS |
+| $5.00 CAD | $0.83 CAD | $0.49 CAD | $0.34 CAD | 16.6% | 1 | Γ£à PASS |
+| $9.00 CAD | $0.75 CAD | $0.62 CAD | $0.13 CAD | 8.3% | 2 | Γ£à PASS |
+| $10.00 CAD | $0.79 CAD | $0.65 CAD | $0.14 CAD | 7.9% | 2 | Γ£à PASS |
+| $12.00 CAD | $0.87 CAD | $0.72 CAD | $0.15 CAD | 7.3% | 2 | Γ£à PASS |
+| $15.00 CAD | $0.99 CAD | $0.82 CAD | $0.17 CAD | 6.6% | 2 | Γ£à PASS |
+| $18.00 CAD | $1.10 CAD | $0.92 CAD | $0.18 CAD | 6.1% | 2 | Γ£à PASS |
+| $20.00 CAD | $1.18 CAD | $0.99 CAD | $0.19 CAD | 5.9% | 2 | Γ£à PASS |
+| $25.00 CAD | $1.20 CAD | $1.15 CAD | $0.05 CAD | 4.8% | 3 | Γ£à PASS |
+| $30.00 CAD | $1.37 CAD | $1.32 CAD | $0.05 CAD | 4.6% | 3 | Γ£à PASS |
+| $40.00 CAD | $1.71 CAD | $1.66 CAD | $0.05 CAD | 4.3% | 3 | Γ£à PASS |
+| $50.00 CAD | $2.05 CAD | $2.00 CAD | $0.05 CAD | 4.1% | 3 | Γ£à PASS |
+
+## Full Range Simulation ($1 to $50)
+
+**Statistics:**
+- Total Orders Tested: 50
+- Passed (ΓëÑ $0.05 profit): 50
+- Failed: 0
+- Average Profit: $0.14 CAD
+- Minimum Profit: $0.05 CAD
+- Maximum Profit: $0.34 CAD
+- Average Fee %: 8.48%
+
+## Tier Performance Analysis
+
+### Tier 1: Small Orders ($1-$8.99)
+- Formula: $0.65 + 3.5%
+- Orders: 8
+- Avg Profit: $0.34 CAD
+- Avg Fee %: 25.69%
+
+### Tier 2: Medium Orders ($9-$24.99)
+- Formula: $0.40 + 3.9%
+- Orders: 16
+- Avg Profit: $0.17 CAD
+- Avg Fee %: 6.55%
+
+### Tier 3: Large Orders ($25+)
+- Formula: $0.05 + 4.0%
+- Orders: 26
+- Avg Profit: $0.05 CAD
+- Avg Fee %: 4.37%
+
+
+
+
+================================================================================
+
+≡ƒôè Detailed Examples
+
+
+--- $5 Order ---
+Order Subtotal: $5.00 CAD
+Platform Fee (Small orders ($1-$8.99)): $0.83 CAD (16.6%)
+Tax (HST): $0.65 CAD
+Total Payment: $6.48 CAD
+
+--- Platform Breakdown ---
+Stripe Processing Fee: $0.49 CAD
+Platform Profit: $0.34 CAD
+Profit Status: Γ£à PASS
+
+--- $12 Order ---
+Order Subtotal: $12.00 CAD
+Platform Fee (Medium orders ($9-$24.99)): $0.87 CAD (7.3%)
+Tax (HST): $1.56 CAD
+Total Payment: $14.43 CAD
+
+--- Platform Breakdown ---
+Stripe Processing Fee: $0.72 CAD
+Platform Profit: $0.15 CAD
+Profit Status: Γ£à PASS
+
+--- $15 Order ---
+Order Subtotal: $15.00 CAD
+Platform Fee (Medium orders ($9-$24.99)): $0.99 CAD (6.6%)
+Tax (HST): $1.95 CAD
+Total Payment: $17.94 CAD
+
+--- Platform Breakdown ---
+Stripe Processing Fee: $0.82 CAD
+Platform Profit: $0.17 CAD
+Profit Status: Γ£à PASS
+
+--- $30 Order ---
+Order Subtotal: $30.00 CAD
+Platform Fee (Large orders ($25+)): $1.37 CAD (4.6%)
+Tax (HST): $3.90 CAD
+Total Payment: $35.27 CAD
+
+--- Platform Breakdown ---
+Stripe Processing Fee: $1.32 CAD
+Platform Profit: $0.05 CAD
+Profit Status: Γ£à PASS
+
+--- $50 Order ---
+Order Subtotal: $50.00 CAD
+Platform Fee (Large orders ($25+)): $2.05 CAD (4.1%)
+Tax (HST): $6.50 CAD
+Total Payment: $58.55 CAD
+
+--- Platform Breakdown ---
+Stripe Processing Fee: $2.00 CAD
+Platform Profit: $0.05 CAD
+Profit Status: Γ£à PASS
+
+
+================================================================================
+
+Γ£à Test Complete!
+
