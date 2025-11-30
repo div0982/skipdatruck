@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Mail, Lock, User, TruckIcon } from 'lucide-react';
+import { Loader2, Mail, Lock, User, TruckIcon, DollarSign } from 'lucide-react';
 
 export default function SignupPage() {
     const router = useRouter();
@@ -11,6 +11,7 @@ export default function SignupPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [businessModel, setBusinessModel] = useState('MERCHANT_PAYS_FEES'); // Default to recommended
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -31,11 +32,11 @@ export default function SignupPage() {
         setLoading(true);
 
         try {
-            // Create account
+            // Create account with business model
             const response = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, name }),
+                body: JSON.stringify({ email, password, name, businessModel }),
             });
 
             const data = await response.json();
@@ -164,6 +165,67 @@ export default function SignupPage() {
                                     placeholder="••••••••"
                                     disabled={loading}
                                 />
+                            </div>
+                        </div>
+
+                        {/* Business Model Selection */}
+                        <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-5 rounded-xl border border-purple-200">
+                            <div className="flex items-center gap-2 mb-3">
+                                <DollarSign className="w-5 h-5 text-purple-600" />
+                                <label className="block text-sm font-semibold text-gray-900">
+                                    Choose Your Fee Model
+                                </label>
+                            </div>
+
+                            <div className="space-y-3">
+                                {/* Merchant Pays (Recommended) */}
+                                <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${businessModel === 'MERCHANT_PAYS_FEES'
+                                        ? 'border-purple-600 bg-white shadow-sm'
+                                        : 'border-gray-200 bg-white/50 hover:border-purple-300'
+                                    }`}>
+                                    <input
+                                        type="radio"
+                                        name="businessModel"
+                                        value="MERCHANT_PAYS_FEES"
+                                        checked={businessModel === 'MERCHANT_PAYS_FEES'}
+                                        onChange={(e) => setBusinessModel(e.target.value)}
+                                        className="mt-1"
+                                        disabled={loading}
+                                    />
+                                    <div className="ml-3 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-semibold text-gray-900">I'll Pay Stripe Fees</span>
+                                            <span className="px-2 py-0.5 bg-purple-600 text-white text-xs font-bold rounded-full">
+                                                RECOMMENDED
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            <strong>Just 3% commission</strong> - You pay Stripe directly. Lower fees for your customers, more profit for you!
+                                        </p>
+                                    </div>
+                                </label>
+
+                                {/* Platform Pays */}
+                                <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${businessModel === 'PLATFORM_PAYS_FEES'
+                                        ? 'border-purple-600 bg-white shadow-sm'
+                                        : 'border-gray-200 bg-white/50 hover:border-purple-300'
+                                    }`}>
+                                    <input
+                                        type="radio"
+                                        name="businessModel"
+                                        value="PLATFORM_PAYS_FEES"
+                                        checked={businessModel === 'PLATFORM_PAYS_FEES'}
+                                        onChange={(e) => setBusinessModel(e.target.value)}
+                                        className="mt-1"
+                                        disabled={loading}
+                                    />
+                                    <div className="ml-3 flex-1">
+                                        <span className="font-semibold text-gray-900">Platform Pays Stripe Fees</span>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            <strong>4-7% fee</strong> - We handle all payment processing. No Stripe setup required.
+                                        </p>
+                                    </div>
+                                </label>
                             </div>
                         </div>
 

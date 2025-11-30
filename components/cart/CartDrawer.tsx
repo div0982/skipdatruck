@@ -6,8 +6,6 @@ import { useCart } from './CartProvider';
 import { formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { calculateTax } from '@/lib/tax-calculator';
-import { calculatePlatformFee, calculateTotal } from '@/lib/fee-calculator';
 import { getTaxLabel } from '@/lib/tax-calculator';
 
 interface CartDrawerProps {
@@ -116,56 +114,22 @@ export default function CartDrawer({ truck }: CartDrawerProps) {
                             </button>
                         </div>
                     ))}
-                </div>
-
-                {/* Footer */}
-                <div className="p-6 border-t space-y-4 safe-bottom">
-                    {/* Price Breakdown */}
-                    {(() => {
-                        const subtotal = total; // This is the cart subtotal
-                        const convenienceFee = calculatePlatformFee(subtotal); // Fee calculated on subtotal BEFORE tax
-                        const tax = calculateTax(subtotal, truck.province); // Tax calculated on subtotal
-                        const finalTotal = calculateTotal(subtotal, tax, convenienceFee);
-                        
-                        return (
-                            <>
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>Subtotal</span>
-                                        <span>{formatCurrency(subtotal)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>Convenience Fee (4% + $0.10)</span>
-                                        <span>{formatCurrency(convenienceFee)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>{getTaxLabel(truck.province)}</span>
-                                        <span>{formatCurrency(tax)}</span>
-                                    </div>
-                                </div>
-                                
-                                {/* Total */}
-                                <div className="pt-2 border-t">
-                                    <div className="flex justify-between text-xl font-bold">
-                                        <span>Total</span>
-                                        <span className="text-purple-600">
-                                            {formatCurrency(finalTotal)}
-                                        </span>
-                                    </div>
-                                </div>
+                </span>
+            </div>
+        </div >
                             </>
                         );
-                    })()}
+}) ()}
 
-                    <button
-                        onClick={handleCheckout}
-                        disabled={items.length === 0}
-                        className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold py-4 rounded-2xl transition-colors shadow-lg"
-                    >
-                        Proceed to Checkout
-                    </button>
-                </div>
-            </div>
+<button
+    onClick={handleCheckout}
+    disabled={items.length === 0}
+    className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold py-4 rounded-2xl transition-colors shadow-lg"
+>
+    Proceed to Checkout
+</button>
+                </div >
+            </div >
         </>
     );
 }
