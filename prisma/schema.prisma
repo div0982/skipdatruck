@@ -24,7 +24,7 @@ model User {
   stripeOnboarded   Boolean     @default(false)
   
   // Business model - determines fee structure
-  businessModel     BusinessModel @default(MERCHANT_PAYS_FEES)
+  businessModel     BusinessModel? @default(MERCHANT_PAYS_FEES)
   
   // Relations
   ownedTrucks       FoodTruck[]
