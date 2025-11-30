@@ -1,4 +1,23 @@
 /**
+ * Fee Simulator - Generates comprehensive profit analysis across order ranges
+ */
+
+import { calculateFees, formatCurrency, validateProfitMargin, type FeeBreakdown } from './fee-calculator';
+
+export interface SimulationResult {
+    subtotal: number;
+    myFee: number;
+    stripeCost: number;
+    netProfit: number;
+    feePercentage: number;
+    tier: number | null; // null for MERCHANT_PAYS_FEES mode
+    passed: boolean;
+}
+
+/**
+ * Simulates fees for a range of order values
+ */
+export function simulateFeeRange(start: number, end: number, step: number = 1): SimulationResult[] {
     const results: SimulationResult[] = [];
 
     for (let subtotal = start; subtotal <= end; subtotal += step) {
@@ -44,7 +63,7 @@ export function formatSimulationTable(results: SimulationResult[]): string {
     table += '|----------|--------|-------------|------------|-------|------|--------|\n';
 
     for (const result of results) {
-        table += `| ${formatCurrency(result.subtotal)} | ${formatCurrency(result.myFee)} | ${formatCurrency(result.stripeCost)} | ${formatCurrency(result.netProfit)} | ${result.feePercentage.toFixed(1)}% | ${result.tier} | ${result.passed ? '✅ PASS' : '❌ FAIL'} |\n`;
+        table += `| ${formatCurrency(result.subtotal)} | ${formatCurrency(result.myFee)} | ${formatCurrency(result.stripeCost)} | ${formatCurrency(result.netProfit)} | ${result.feePercentage.toFixed(1)}% | ${result.tier || 'N/A'} | ${result.passed ? '✅ PASS' : '❌ FAIL'} |\n`;
     }
 
     return table;
@@ -116,23 +135,29 @@ export function generateFullReport(): string {
     const tier2 = fullRange.filter(r => r.tier === 2);
     const tier3 = fullRange.filter(r => r.tier === 3);
 
-    report += '### Tier 1: Small Orders ($1-$8.99)\n';
-    report += `- Formula: $0.65 + 3.5%\n`;
-    report += `- Orders: ${tier1.length}\n`;
-    report += `- Avg Profit: ${formatCurrency(tier1.reduce((sum, r) => sum + r.netProfit, 0) / tier1.length)}\n`;
-    report += `- Avg Fee %: ${(tier1.reduce((sum, r) => sum + r.feePercentage, 0) / tier1.length).toFixed(2)}%\n\n`;
+    if (tier1.length > 0) {
+        report += '### Tier 1: Small Orders ($1-$8.99)\n';
+        report += `- Formula: $0.65 + 3.5%\n`;
+        report += `- Orders: ${tier1.length}\n`;
+        report += `- Avg Profit: ${formatCurrency(tier1.reduce((sum, r) => sum + r.netProfit, 0) / tier1.length)}\n`;
+        report += `- Avg Fee %: ${(tier1.reduce((sum, r) => sum + r.feePercentage, 0) / tier1.length).toFixed(2)}%\n\n`;
+    }
 
-    report += '### Tier 2: Medium Orders ($9-$24.99)\n';
-    report += `- Formula: $0.40 + 3.9%\n`;
-    report += `- Orders: ${tier2.length}\n`;
-    report += `- Avg Profit: ${formatCurrency(tier2.reduce((sum, r) => sum + r.netProfit, 0) / tier2.length)}\n`;
-    report += `- Avg Fee %: ${(tier2.reduce((sum, r) => sum + r.feePercentage, 0) / tier2.length).toFixed(2)}%\n\n`;
+    if (tier2.length > 0) {
+        report += '### Tier 2: Medium Orders ($9-$24.99)\n';
+        report += `- Formula: $0.40 + 3.9%\n`;
+        report += `- Orders: ${tier2.length}\n`;
+        report += `- Avg Profit: ${formatCurrency(tier2.reduce((sum, r) => sum + r.netProfit, 0) / tier2.length)}\n`;
+        report += `- Avg Fee %: ${(tier2.reduce((sum, r) => sum + r.feePercentage, 0) / tier2.length).toFixed(2)}%\n\n`;
+    }
 
-    report += '### Tier 3: Large Orders ($25+)\n';
-    report += `- Formula: $0.05 + 4.0%\n`;
-    report += `- Orders: ${tier3.length}\n`;
-    report += `- Avg Profit: ${formatCurrency(tier3.reduce((sum, r) => sum + r.netProfit, 0) / tier3.length)}\n`;
-    report += `- Avg Fee %: ${(tier3.reduce((sum, r) => sum + r.feePercentage, 0) / tier3.length).toFixed(2)}%\n\n`;
+    if (tier3.length > 0) {
+        report += '### Tier 3: Large Orders ($25+)\n';
+        report += `- Formula: $0.05 + 4.0%\n`;
+        report += `- Orders: ${tier3.length}\n`;
+        report += `- Avg Profit: ${formatCurrency(tier3.reduce((sum, r) => sum + r.netProfit, 0) / tier3.length)}\n`;
+        report += `- Avg Fee %: ${(tier3.reduce((sum, r) => sum + r.feePercentage, 0) / tier3.length).toFixed(2)}%\n\n`;
+    }
 
     return report;
 }
