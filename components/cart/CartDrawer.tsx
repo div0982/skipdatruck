@@ -5,7 +5,6 @@ import { X, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { useCart } from './CartProvider';
 import { formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils';
 import { getTaxLabel } from '@/lib/tax-calculator';
 
 interface CartDrawerProps {
@@ -114,22 +113,59 @@ export default function CartDrawer({ truck }: CartDrawerProps) {
                             </button>
                         </div>
                     ))}
-                </span>
-            </div>
-        </div >
+                </div>
+
+                {/* Footer */}
+                <div className="p-6 border-t space-y-4 safe-bottom">
+                    {/* Price Breakdown */}
+                    {(() => {
+                        const subtotal = total;
+                        // Platform fee will be calculated at checkout based on merchant's business model
+                        // For now, show estimated 3-4%
+                        const estimatedFeePercentage = 0.035; // 3.5% average
+                        const estimatedFee = subtotal * estimatedFeePercentage;
+                        const tax = subtotal * (truck.taxRate || 0.13);
+                        const finalTotal = subtotal + estimatedFee + tax;
+
+                        return (
+                            <>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between text-gray-600">
+                                        <span>Subtotal</span>
+                                        <span>{formatCurrency(subtotal)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-gray-600">
+                                        <span>Platform Fee (est. 3-4%)</span>
+                                        <span>{formatCurrency(estimatedFee)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-gray-600">
+                                        <span>{getTaxLabel(truck.province)}</span>
+                                        <span>{formatCurrency(tax)}</span>
+                                    </div>
+                                </div>
+
+                                {/* Total */}
+                                <div className="pt-2 border-t">
+                                    <div className="flex justify-between text-xl font-bold">
+                                        <span>Total</span>
+                                        <span className="text-purple-600">
+                                            {formatCurrency(finalTotal)}
+                                        </span>
+                                    </div>
+                                </div>
                             </>
                         );
-}) ()}
+                    })()}
 
-<button
-    onClick={handleCheckout}
-    disabled={items.length === 0}
-    className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold py-4 rounded-2xl transition-colors shadow-lg"
->
-    Proceed to Checkout
-</button>
-                </div >
-            </div >
+                    <button
+                        onClick={handleCheckout}
+                        disabled={items.length === 0}
+                        className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold py-4 rounded-2xl transition-colors shadow-lg"
+                    >
+                        Proceed to Checkout
+                    </button>
+                </div>
+            </div>
         </>
     );
 }
