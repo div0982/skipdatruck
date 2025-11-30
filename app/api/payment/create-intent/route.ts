@@ -128,9 +128,30 @@ export async function POST(req: NextRequest) {
                 merchantPayout: merchantPayout.toFixed(2),
             },
             automatic_payment_methods: {
-                where: { id: order.id },
-                data: { stripePaymentId: paymentIntent.id },
-            });
+                enabled: true,
+            },
+        };
+
+        // Add Connect-specific fields only if using Stripe Connect
+        if (useStripeConnect) {
+            // Destination charges with application fee
+            // Stripe auto-calculates: transfer = total - application_fee - stripe_fee
+
+            paymentIntentData.application_fee_amount = toStripeCents(platformFee); // $0.70 to platform
+            paymentIntentData.transfer_data = {
+                destination: truck.owner.stripeConnectId,
+                // NO amount - Stripe auto-calculates transfer amount
+                // Merchant pays Stripe fees only on what they receive
+            };
+        }
+
+        const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
+
+        // Update order with payment intent ID
+        await prisma.order.update({
+            where: { id: order.id },
+            data: { stripePaymentId: paymentIntent.id },
+        });
 
         return NextResponse.json({
             clientSecret: paymentIntent.client_secret,
