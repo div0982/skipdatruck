@@ -28,7 +28,16 @@ export async function POST(req: NextRequest) {
         // Get truck details
         const truck = await prisma.foodTruck.findUnique({
             where: { id: truckId },
-            include: { owner: true },
+            include: {
+                owner: {
+                    select: {
+                        id: true,
+                        stripeConnectId: true,
+                        stripeOnboarded: true,
+                        businessModel: true,
+                    }
+                }
+            },
         });
 
         if (!truck) {
@@ -70,7 +79,8 @@ export async function POST(req: NextRequest) {
             taxAmount: tax,
             totalPayment: total,
             stripeFee,
-            platformProfit
+            platformProfit,
+            feePercentage
         } = feeBreakdown;
 
         // Calculate merchant payout based on business model
@@ -180,6 +190,7 @@ export async function POST(req: NextRequest) {
                 platformProfit,
                 merchantPayout,
                 total,
+                feePercentage,
             },
         });
 
@@ -191,4 +202,3 @@ export async function POST(req: NextRequest) {
         );
     }
 }
-
