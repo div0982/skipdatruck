@@ -3,7 +3,7 @@
 // Order Success Page - Shows order confirmation after payment
 // Polls for order by orderNumber (order is created by webhook after payment)
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OrderDetails from '@/components/order/OrderDetails';
 import OrderTracking from '@/components/order/OrderTracking';
@@ -22,7 +22,7 @@ interface Order {
     [key: string]: any;
 }
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
     const searchParams = useSearchParams();
     const orderNumber = searchParams.get('orderNumber');
     const [order, setOrder] = useState<Order | null>(null);
@@ -148,6 +148,28 @@ export default function OrderSuccessPage() {
                 <OrderTracking order={order} />
             </div>
         </div>
+    );
+}
+
+export default function OrderSuccessPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                            Loading...
+                        </h1>
+                        <p className="text-gray-600">
+                            Please wait
+                        </p>
+                    </div>
+                </div>
+            }
+        >
+            <OrderSuccessContent />
+        </Suspense>
     );
 }
 
