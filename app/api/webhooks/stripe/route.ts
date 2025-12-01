@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
                     },
                 });
 
-                console.log(`Payment succeeded - Order created: ${order.orderNumber} (${order.id})`);
+                console.log(`[WEBHOOK] ✅ Payment succeeded - Order created: ${order.orderNumber} (${order.id})`);
                 break;
             }
 

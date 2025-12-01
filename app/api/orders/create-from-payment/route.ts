@@ -16,12 +16,15 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        console.log(`[FALLBACK] Creating order from payment intent: ${paymentIntentId}, Order: ${orderNumber}`);
+
         // Check if order already exists
         const existingOrder = await prisma.order.findUnique({
             where: { orderNumber },
         });
 
         if (existingOrder) {
+            console.log(`[FALLBACK] Order already exists, returning existing order`);
             return NextResponse.json({
                 success: true,
                 order: existingOrder,
@@ -30,15 +33,19 @@ export async function POST(req: NextRequest) {
         }
 
         // Retrieve payment intent from Stripe
+        console.log(`[FALLBACK] Retrieving payment intent from Stripe...`);
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
         // Only create order if payment succeeded
         if (paymentIntent.status !== 'succeeded') {
+            console.error(`[FALLBACK] Payment not succeeded. Status: ${paymentIntent.status}`);
             return NextResponse.json(
                 { error: `Payment not succeeded. Status: ${paymentIntent.status}` },
                 { status: 400 }
             );
         }
+
+        console.log(`[FALLBACK] Payment succeeded, creating order...`);
 
         // Parse order data from metadata
         const metadata = paymentIntent.metadata;
@@ -63,6 +70,8 @@ export async function POST(req: NextRequest) {
                 status: 'PENDING',
             },
         });
+
+        console.log(`[FALLBACK] ✅ Order created successfully: ${order.orderNumber} (ID: ${order.id})`);
 
         return NextResponse.json({
             success: true,
