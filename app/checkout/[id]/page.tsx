@@ -7,8 +7,6 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import CheckoutForm from '@/components/checkout/CheckoutForm';
 import OrderSummary from '@/components/checkout/OrderSummary';
-import { calculateTax } from '@/lib/tax-calculator';
-import { calculatePlatformFee, calculateTotal } from '@/lib/fee-calculator';
 import { Province } from '@prisma/client';
 import { ArrowLeft } from 'lucide-react';
 
@@ -39,6 +37,13 @@ interface CartData {
     taxRate: number;
 }
 
+interface FeeBreakdown {
+    subtotal: number;
+    tax: number;
+    platformFee: number;
+    total: number;
+}
+
 export default function CheckoutPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const [cartData, setCartData] = useState<CartData | null>(null);
@@ -46,13 +51,14 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
     const [orderId, setOrderId] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [truckId, setTruckId] = useState<string>('');
+    const [feeBreakdown, setFeeBreakdown] = useState<FeeBreakdown | null>(null);
     const hasCreatedIntentRef = useRef(false);
 
     useEffect(() => {
         // In Next.js 16, params is a Promise
         params.then(({ id }) => {
             setTruckId(id);
-            
+
             // Load cart from session storage
             const savedCart = sessionStorage.getItem('cart');
             if (!savedCart) {
@@ -94,6 +100,15 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
 
             setClientSecret(data.clientSecret);
             setOrderId(data.orderId);
+
+            // Store the actual fee breakdown from the API response
+            setFeeBreakdown({
+                subtotal: data.breakdown.subtotal,
+                tax: data.breakdown.tax,
+                platformFee: data.breakdown.platformFee,
+                total: data.breakdown.total,
+            });
+
             setLoading(false);
         } catch (error: any) {
             console.error('Payment intent error:', error);
@@ -106,7 +121,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
         }
     };
 
-    if (loading || !cartData) {
+    if (loading || !cartData || !feeBreakdown) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
@@ -116,11 +131,6 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
             </div>
         );
     }
-
-    const subtotal = cartData.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const tax = calculateTax(subtotal, cartData.province);
-    const platformFee = calculatePlatformFee(subtotal);
-    const total = calculateTotal(subtotal, tax, platformFee);
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-20">
@@ -144,10 +154,10 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                 {/* Order Summary */}
                 <OrderSummary
                     items={cartData.items}
-                    subtotal={subtotal}
-                    tax={tax}
-                    platformFee={platformFee}
-                    total={total}
+                    subtotal={feeBreakdown.subtotal}
+                    tax={feeBreakdown.tax}
+                    platformFee={feeBreakdown.platformFee}
+                    total={feeBreakdown.total}
                     province={cartData.province}
                 />
 
@@ -157,7 +167,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                         <CheckoutForm
                             orderId={orderId}
                             truckId={cartData.truckId}
-                            total={total}
+                            total={feeBreakdown.total}
                         />
                     </Elements>
                 )}
