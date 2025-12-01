@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
             // Store items in chunks (each chunk max 450 chars)
             let chunkIndex = 0;
             let currentChunk = '';
-            minimalItems.forEach((item, index) => {
+            minimalItems.forEach((item: { id: string; qty: number; price: string; name: string }) => {
                 const itemStr = JSON.stringify(item);
                 if (currentChunk.length + itemStr.length + 1 > 450) {
                     // Save current chunk
