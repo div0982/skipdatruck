@@ -228,6 +228,14 @@ function OrderSuccessContent() {
                     <p className="text-gray-600">
                         Your order has been placed successfully
                     </p>
+                    <div className="mt-6">
+                        <a
+                            href="/trucks"
+                            className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-colors"
+                        >
+                            Browse Other Food Trucks
+                        </a>
+                    </div>
                 </div>
 
                 {/* Order Details */}

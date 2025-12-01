@@ -54,6 +54,8 @@ interface AdminDashboardTabsProps {
         totalTrucks: number;
         totalOrders: number;
         totalPlatformRevenue: number;
+        totalStripeFees: number;
+        netPlatformRevenue: number;
         totalVolume: number;
         totalTaxCollected: number;
     };
@@ -234,7 +236,7 @@ function OverviewTab({ totalStats, recentOrders, recentTrucks }: any) {
     return (
         <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                     <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -279,6 +281,30 @@ function OverviewTab({ totalStats, recentOrders, recentTrucks }: any) {
                         </div>
                         <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
                             <FileText className="w-6 h-6 text-red-600" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                            <p className="text-sm text-gray-600 mb-1">Stripe Fees Paid</p>
+                            <p className="text-2xl font-bold text-purple-600">{formatCurrency(totalStats.totalStripeFees)}</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center">
+                            <Receipt className="w-6 h-6 text-purple-600" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                            <p className="text-sm text-gray-600 mb-1">Net Platform Revenue</p>
+                            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalStats.netPlatformRevenue)}</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
+                            <DollarSign className="w-6 h-6 text-green-600" />
                         </div>
                     </div>
                 </div>

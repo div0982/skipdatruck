@@ -1,10 +1,9 @@
 // Admin Dashboard - Comprehensive platform oversight
 import { prisma } from '@/lib/db';
 import { formatCurrency } from '@/lib/utils';
-import { getTaxLabel, getTaxRate } from '@/lib/tax-calculator';
 import Link from 'next/link';
 import AdminDashboardTabs from '@/components/admin/AdminDashboardTabs';
-import { Province } from '@prisma/client';
+import { Province, BusinessModel } from '@prisma/client';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -54,6 +53,15 @@ export default async function AdminDashboard() {
             platformFee: true,
             total: true,
             createdAt: true,
+            truck: {
+                select: {
+                    owner: {
+                        select: {
+                            businessModel: true,
+                        },
+                    },
+                },
+            },
         },
     });
 
@@ -159,6 +167,19 @@ export default async function AdminDashboard() {
     const totalVolume = allOrders.reduce((sum, order) => sum + order.total, 0);
     const totalTaxCollected = allOrders.reduce((sum, order) => sum + order.tax, 0);
 
+    const STRIPE_PERCENT_FEE = 0.029;
+    const STRIPE_FLAT_FEE = 0.30;
+
+    const totalStripeFees = allOrders.reduce((sum, order) => {
+        const businessModel = order.truck?.owner?.businessModel || BusinessModel.MERCHANT_PAYS_FEES;
+        if (businessModel === BusinessModel.PLATFORM_PAYS_FEES) {
+            return sum + (order.total * STRIPE_PERCENT_FEE + STRIPE_FLAT_FEE);
+        }
+        return sum;
+    }, 0);
+
+    const netPlatformRevenue = totalPlatformRevenue - totalStripeFees;
+
     // Get recent trucks
     const recentTrucks = await prisma.foodTruck.findMany({
         take: 5,
@@ -225,6 +246,8 @@ export default async function AdminDashboard() {
                         totalTrucks,
                         totalOrders,
                         totalPlatformRevenue,
+                    totalStripeFees,
+                    netPlatformRevenue,
                         totalVolume,
                         totalTaxCollected,
                     }}
