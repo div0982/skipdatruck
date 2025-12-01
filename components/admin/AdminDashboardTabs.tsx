@@ -49,7 +49,7 @@ interface TaxAuditData {
 
 interface AdminDashboardTabsProps {
     trucks: TruckRevenue[];
-    taxAudit: TaxAuditData[];
+    taxAudit: TaxAuditData;
     totalStats: {
         totalTrucks: number;
         totalOrders: number;
