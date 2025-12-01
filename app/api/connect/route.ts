@@ -77,10 +77,14 @@ export async function POST(req: NextRequest) {
         }
 
         // Create account link for onboarding
+        // Use environment variable or fallback to current origin
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+        
         const accountLink = await stripe.accountLinks.create({
             account: accountId,
-            refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/merchant`,
-            return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/merchant`,
+            refresh_url: `${baseUrl}/dashboard/merchant`,
+            return_url: `${baseUrl}/dashboard/merchant`,
             type: 'account_onboarding',
         });
 

@@ -39,10 +39,15 @@ export default function StripeConnectButton({ truckId, truckName }: StripeConnec
 
         try {
             const res = await fetch(`/api/connect?userId=${session.user.id}`);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
             const data = await res.json();
             setStatus(data);
         } catch (err) {
             console.error('Failed to check Connect status:', err);
+            // Set error state but don't block UI
+            setError('Unable to check connection status. Please try again.');
         } finally {
             setCheckingStatus(false);
         }
@@ -68,14 +73,18 @@ export default function StripeConnectButton({ truckId, truckName }: StripeConnec
                 }),
             });
 
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+            }
+
             const data = await res.json();
 
-            if (res.ok && data.url) {
+            if (data.url) {
                 // Redirect to Stripe onboarding
                 window.location.href = data.url;
             } else {
-                setError(data.error || 'Failed to create Connect account');
-                setLoading(false);
+                throw new Error(data.error || 'No redirect URL received from Stripe');
             }
         } catch (err) {
             setError('Network error. Please try again.');
