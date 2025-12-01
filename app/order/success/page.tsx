@@ -35,9 +35,17 @@ function OrderSuccessContent() {
 
         // Get payment intent ID from URL or session storage
         const urlParams = new URLSearchParams(window.location.search);
-        const paymentIntentId = urlParams.get('payment_intent') || 
-                               urlParams.get('payment_intent_client_secret')?.split('_secret_')[0] ||
-                               sessionStorage.getItem('lastPaymentIntentId');
+        let paymentIntentId = urlParams.get('payment_intent');
+        
+        // If not in URL, try to extract from client_secret or get from session storage
+        if (!paymentIntentId) {
+            const clientSecret = urlParams.get('payment_intent_client_secret');
+            if (clientSecret) {
+                paymentIntentId = clientSecret.split('_secret_')[0];
+            } else {
+                paymentIntentId = sessionStorage.getItem('lastPaymentIntentId');
+            }
+        }
 
         const fetchOrder = async () => {
             try {
