@@ -12,10 +12,19 @@ export async function GET(req: NextRequest) {
         const truckId = searchParams.get('truckId');
         const userId = searchParams.get('userId');
         const statusParam = searchParams.get('status');
+        const orderNumber = searchParams.get('orderNumber');
 
         const where: any = {};
         if (truckId) where.truckId = truckId;
         if (userId) where.userId = userId;
+        if (orderNumber) where.orderNumber = orderNumber;
+        
+        // Only show orders where payment succeeded (unless searching by orderNumber for success page)
+        // This ensures merchants only see orders that were actually paid for
+        if (!orderNumber) {
+            where.stripeStatus = 'succeeded';
+            where.stripePaymentId = { not: null };
+        }
         
         // Handle multiple statuses (comma-separated) or single status
         if (statusParam) {

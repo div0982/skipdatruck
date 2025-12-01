@@ -26,6 +26,7 @@ export default function LiveOrders({ truckId }: LiveOrdersProps) {
 
     const fetchOrders = async () => {
         try {
+            // API already filters to only show orders where payment succeeded
             const response = await fetch(`/api/orders?truckId=${truckId}&status=PENDING,PREPARING,READY`);
             if (!response.ok) {
                 throw new Error('Failed to fetch orders');

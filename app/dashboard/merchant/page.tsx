@@ -107,19 +107,6 @@ export default async function MerchantDashboard() {
                 </div>
 
                 <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-                    {/* Register New Truck Button */}
-                    <div className="flex justify-end">
-                        <a
-                            href="/dashboard/merchant/register"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-purple-600 text-purple-600 font-semibold rounded-lg hover:bg-purple-50 transition-all"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                            Register New Truck
-                        </a>
-                    </div>
-
                     {/* Stats */}
                     <DashboardStats
                         todayOrders={todayOrders.length}

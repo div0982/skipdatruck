@@ -37,31 +37,40 @@ export async function POST(req: NextRequest) {
             case 'payment_intent.succeeded': {
                 const paymentIntent = event.data.object as Stripe.PaymentIntent;
 
-                // Update order status
-                await prisma.order.update({
-                    where: { stripePaymentId: paymentIntent.id },
+                // Create order NOW that payment has succeeded
+                // Parse order data from metadata
+                const metadata = paymentIntent.metadata;
+                const items = JSON.parse(metadata.items || '[]');
+
+                const order = await prisma.order.create({
                     data: {
+                        orderNumber: metadata.orderNumber,
+                        truckId: metadata.truckId,
+                        userId: metadata.userId || null,
+                        customerName: metadata.customerName || null,
+                        customerEmail: metadata.customerEmail || null,
+                        customerPhone: metadata.customerPhone || null,
+                        items: items,
+                        subtotal: parseFloat(metadata.subtotal),
+                        tax: parseFloat(metadata.tax),
+                        platformFee: parseFloat(metadata.platformFee),
+                        total: paymentIntent.amount / 100, // Convert from cents
+                        stripePaymentId: paymentIntent.id,
                         stripeStatus: paymentIntent.status,
                         status: 'PENDING', // Order is now pending acknowledgment by truck
                     },
                 });
 
-                console.log(`Payment succeeded for order: ${paymentIntent.metadata.orderNumber}`);
+                console.log(`Payment succeeded - Order created: ${order.orderNumber} (${order.id})`);
                 break;
             }
 
             case 'payment_intent.payment_failed': {
                 const paymentIntent = event.data.object as Stripe.PaymentIntent;
 
-                await prisma.order.update({
-                    where: { stripePaymentId: paymentIntent.id },
-                    data: {
-                        stripeStatus: paymentIntent.status,
-                        status: 'CANCELLED',
-                    },
-                });
-
-                console.log(`Payment failed for order: ${paymentIntent.metadata.orderNumber}`);
+                // Payment failed - no order was created, so nothing to update
+                // Just log it
+                console.log(`Payment failed for payment intent: ${paymentIntent.id} (Order: ${paymentIntent.metadata.orderNumber})`);
                 break;
             }
 

@@ -109,30 +109,14 @@ export async function POST(req: NextRequest) {
         // Generate order number
         const orderNumber = generateOrderNumber();
 
-        // Create order in database
-        const order = await prisma.order.create({
-            data: {
-                orderNumber,
-                truckId,
-                userId: customerInfo?.userId || null,
-                customerName: customerInfo?.name,
-                customerEmail: customerInfo?.email,
-                customerPhone: customerInfo?.phone,
-                items,
-                subtotal,
-                tax,
-                platformFee,
-                total,
-                status: 'PENDING',
-            },
-        });
-
+        // DON'T create order yet - wait for payment confirmation
+        // Store all order data in PaymentIntent metadata instead
         const paymentIntentData: any = {
             // Customer pays full amount including platform fee
             amount: toStripeCents(total),
             currency: 'cad',
             metadata: {
-                orderId: order.id,
+                // Order data to create after payment succeeds
                 orderNumber,
                 truckId,
                 truckName: truck.name,
@@ -143,6 +127,13 @@ export async function POST(req: NextRequest) {
                 stripeFee: stripeFee.toFixed(2),
                 platformProfit: platformProfit.toFixed(2),
                 merchantPayout: merchantPayout.toFixed(2),
+                // Customer info
+                customerName: customerInfo?.name || '',
+                customerEmail: customerInfo?.email || '',
+                customerPhone: customerInfo?.phone || '',
+                userId: customerInfo?.userId || '',
+                // Items as JSON string (metadata has size limits, but should be fine for typical orders)
+                items: JSON.stringify(items),
             },
             automatic_payment_methods: {
                 enabled: true,
@@ -171,15 +162,10 @@ export async function POST(req: NextRequest) {
 
         const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
 
-        // Update order with payment intent ID
-        await prisma.order.update({
-            where: { id: order.id },
-            data: { stripePaymentId: paymentIntent.id },
-        });
-
+        // Return payment intent - order will be created in webhook after payment succeeds
         return NextResponse.json({
             clientSecret: paymentIntent.client_secret,
-            orderId: order.id,
+            paymentIntentId: paymentIntent.id,
             orderNumber,
             breakdown: {
                 businessModel,

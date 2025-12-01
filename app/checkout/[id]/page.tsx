@@ -101,7 +101,9 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
             }
 
             setClientSecret(data.clientSecret);
-            setOrderId(data.orderId);
+            // Order will be created after payment succeeds in webhook
+            // Store orderNumber for reference
+            setOrderId(data.orderNumber || '');
 
             // Store the actual fee breakdown from the API response
             setFeeBreakdown({

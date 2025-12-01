@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/utils';
 import { CreditCard, Loader2 } from 'lucide-react';
 
 interface CheckoutFormProps {
-    orderId: string;
+    orderId: string; // This is now orderNumber
     truckId: string;
     total: number;
 }
@@ -39,7 +39,9 @@ export default function CheckoutForm({ orderId, truckId, total }: CheckoutFormPr
             const { error } = await stripe.confirmPayment({
                 elements,
                 confirmParams: {
-                    return_url: `${window.location.origin}/order/${orderId}`,
+                    // Redirect to a success page - order will be created by webhook
+                    // We'll need to find the order by payment intent ID or order number
+                    return_url: `${window.location.origin}/order/success?orderNumber=${orderId}`,
                 },
             });
 
