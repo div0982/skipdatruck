@@ -41,49 +41,34 @@ export default async function TruckPage({ params }: { params: Promise<{ id: stri
         return (
             <CartProvider truck={truck}>
                 <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-24">
-                    <TruckHeader truck={truck} />
-                    <MenuBrowser
-                        menuItems={truck.menuItems}
-                        categories={categories}
-                        truckId={truck.id}
-                    />
-                    <CartDrawer
-                        truck={truck}
-                        businessModel={truck.owner.businessModel || 'MERCHANT_PAYS_FEES'}
-                    />
-                </div>
-            </CartProvider>
-        );
-    } catch (error: any) {
-        console.error('Error loading truck menu:', error);
-        return (
-            <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
-                <div className="max-w-md w-full bg-red-50 border border-red-200 rounded-xl p-6">
-                    <h2 className="text-xl font-bold text-red-900 mb-2">Error Loading Menu</h2>
-                    <p className="text-red-800">
-                        Unable to load the menu. Please try again later.
-                    </p>
-                </div>
-            </div>
-        );
+                    return (
+                    <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+                        <div className="max-w-md w-full bg-red-50 border border-red-200 rounded-xl p-6">
+                            <h2 className="text-xl font-bold text-red-900 mb-2">Error Loading Menu</h2>
+                            <p className="text-red-800">
+                                Unable to load the menu. Please try again later.
+                            </p>
+                        </div>
+                    </div>
+                    );
     }
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+                    export async function generateMetadata({params}: {params: Promise<{ id: string }> }) {
+    const {id} = await params;
 
-    const truck = await prisma.foodTruck.findUnique({
-        where: { id },
+                    const truck = await prisma.foodTruck.findUnique({
+                        where: {id},
     });
 
-    if (!truck) {
+                    if (!truck) {
         return {
-            title: 'Food Truck Not Found',
+                        title: 'Food Truck Not Found',
         };
     }
 
-    return {
-        title: `${truck.name} - Order Now`,
-        description: truck.description || `Order from ${truck.name}`,
+                    return {
+                        title: `${truck.name} - Order Now`,
+                    description: truck.description || `Order from ${truck.name}`,
     };
 }
