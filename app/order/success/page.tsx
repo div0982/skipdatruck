@@ -55,6 +55,7 @@ function OrderSuccessContent() {
                     const orders = await response.json();
                     const foundOrder = orders.find((o: Order) => o.orderNumber === orderNumber);
                     if (foundOrder) {
+                        console.log(`✅ Order found via webhook: ${orderNumber} (Attempt ${attempts + 1})`);
                         setOrder(foundOrder);
                         setLoading(false);
                         // Clear cart
@@ -67,11 +68,17 @@ function OrderSuccessContent() {
                 // If order not found and we have payment intent ID, try fallback creation
                 if (paymentIntentId && attempts >= 3) {
                     // After 3 attempts (3 seconds), try to create order from payment intent
+                    console.log(`⚠️ Order not found after ${attempts + 1} attempts. Using FALLBACK to create order from payment intent...`);
+                    console.log(`📋 Payment Intent ID: ${paymentIntentId}`);
+                    console.log(`📋 Order Number: ${orderNumber}`);
+                    
                     try {
                         // Ensure payment intent ID has 'pi_' prefix
                         const formattedPaymentIntentId = paymentIntentId.startsWith('pi_') 
                             ? paymentIntentId 
                             : `pi_${paymentIntentId}`;
+
+                        console.log(`🔄 Calling fallback API with Payment Intent: ${formattedPaymentIntentId}`);
 
                         const createResponse = await fetch('/api/orders/create-from-payment', {
                             method: 'POST',
@@ -85,19 +92,31 @@ function OrderSuccessContent() {
                         if (createResponse.ok) {
                             const data = await createResponse.json();
                             if (data.order) {
+                                console.log(`✅ FALLBACK SUCCESS: Order created from payment intent!`);
+                                console.log(`📦 Order ID: ${data.order.id}`);
+                                console.log(`📦 Order Number: ${data.order.orderNumber}`);
                                 setOrder(data.order);
                                 setLoading(false);
                                 sessionStorage.removeItem('cart');
                                 sessionStorage.removeItem('lastPaymentIntentId');
                                 return;
+                            } else {
+                                console.warn(`⚠️ Fallback API returned success but no order in response`);
                             }
+                        } else {
+                            const errorData = await createResponse.json().catch(() => ({ error: 'Unknown error' }));
+                            console.error(`❌ FALLBACK FAILED: ${errorData.error || 'Unknown error'}`);
                         }
                     } catch (createError) {
-                        console.error('Failed to create order from payment intent:', createError);
+                        console.error('❌ FALLBACK ERROR: Failed to create order from payment intent:', createError);
                     }
+                } else if (attempts < 3) {
+                    console.log(`⏳ Waiting for webhook... (Attempt ${attempts + 1}/${maxAttempts})`);
+                } else if (!paymentIntentId) {
+                    console.warn(`⚠️ No payment intent ID available for fallback. Order may not be created if webhook fails.`);
                 }
             } catch (error) {
-                console.error('Failed to fetch order:', error);
+                console.error('❌ Failed to fetch order:', error);
             }
 
             // If not found and haven't exceeded max attempts, try again
