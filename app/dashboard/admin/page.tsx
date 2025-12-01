@@ -42,6 +42,21 @@ export default async function AdminDashboard() {
         },
     });
 
+    // Get all orders first (needed for tax audit calculations)
+    const allOrders = await prisma.order.findMany({
+        where: {
+            stripeStatus: 'succeeded',
+            stripePaymentId: { not: null },
+        },
+        select: {
+            subtotal: true,
+            tax: true,
+            platformFee: true,
+            total: true,
+            createdAt: true,
+        },
+    });
+
     // Calculate revenue per truck
     const truckRevenue = allTrucks.map((truck) => {
         const totalOrders = truck.orders.length;
@@ -136,20 +151,7 @@ export default async function AdminDashboard() {
         }),
     };
 
-    // Get total stats
-    const allOrders = await prisma.order.findMany({
-        where: {
-            stripeStatus: 'succeeded',
-            stripePaymentId: { not: null },
-        },
-        select: {
-            subtotal: true,
-            tax: true,
-            platformFee: true,
-            total: true,
-            createdAt: true,
-        },
-    });
+    // Calculate total stats
 
     const totalTrucks = allTrucks.length;
     const totalOrders = allOrders.length;
