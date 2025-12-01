@@ -153,7 +153,17 @@ export default async function MerchantDashboard() {
                         </a>
 
                         <a
-                            href="/dashboard/merchant/qr"
+                            href={`/dashboard/merchant/tax-audit?truckId=${truck.id}`}
+                            className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200 hover:border-purple-300 hover:shadow-md transition-all"
+                        >
+                            <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                📊 Tax Audit & Reports
+                            </h3>
+                            <p className="text-sm text-gray-600">Financial reports, tax owed, revenue analytics</p>
+                        </a>
+
+                        <a
+                            href={`/dashboard/merchant/qr?truckId=${truck.id}`}
                             className="bg-white rounded-xl p-6 border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all"
                         >
                             <h3 className="font-semibold text-gray-900 mb-2">QR Code</h3>
