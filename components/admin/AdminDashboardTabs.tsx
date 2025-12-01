@@ -18,7 +18,7 @@ import { getTaxLabel } from '@/lib/tax-calculator';
 interface TruckRevenue {
     truckId: string;
     truckName: string;
-    ownerName: string;
+    ownerName: string | null;
     ownerEmail: string;
     province: string;
     totalOrders: number;
@@ -68,7 +68,7 @@ export default function AdminDashboardTabs({
             ['Truck Name', 'Owner', 'Province', 'Total Orders', 'Total Revenue', 'Tax Collected', 'Platform Fees', 'Net Revenue', 'Avg Order Value'].join(','),
             ...trucks.map(truck => [
                 truck.truckName,
-                truck.ownerName || truck.ownerEmail,
+                truck.ownerName || truck.ownerEmail || 'N/A',
                 truck.province,
                 truck.totalOrders,
                 truck.totalRevenue.toFixed(2),
@@ -370,8 +370,10 @@ function RevenueTab({ trucks, onExport }: { trucks: TruckRevenue[]; onExport: ()
                                         <div className="font-semibold text-gray-900">{truck.truckName}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-gray-900">{truck.ownerName || 'N/A'}</div>
-                                        <div className="text-xs text-gray-500">{truck.ownerEmail}</div>
+                                        <div className="text-sm text-gray-900">{truck.ownerName || truck.ownerEmail || 'N/A'}</div>
+                                        {truck.ownerName && (
+                                            <div className="text-xs text-gray-500">{truck.ownerEmail}</div>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                         {truck.province}

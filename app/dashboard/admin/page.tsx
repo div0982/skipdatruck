@@ -54,9 +54,9 @@ export default async function AdminDashboard() {
         return {
             truckId: truck.id,
             truckName: truck.name,
-            ownerName: truck.owner.name,
+            ownerName: truck.owner.name || null,
             ownerEmail: truck.owner.email,
-            province: truck.province,
+            province: truck.province as string,
             totalOrders,
             totalRevenue,
             totalTaxCollected,
