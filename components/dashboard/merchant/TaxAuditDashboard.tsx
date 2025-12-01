@@ -67,7 +67,7 @@ export default function TaxAuditDashboard({
         const csv = [
             ['Date', 'Order Number', 'Subtotal', 'Tax', 'Platform Fee', 'Total', 'Status'].join(','),
             ...orders.map(order => [
-                new Date(order.createdAt).toLocaleDateString(),
+                new Date(order.createdAt).toLocaleDateString('en-CA'),
                 order.orderNumber,
                 order.subtotal.toFixed(2),
                 order.tax.toFixed(2),
@@ -141,7 +141,7 @@ export default function TaxAuditDashboard({
                         ))}
                     </div>
                     <p className="text-sm text-gray-500 mt-2">
-                        {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}
+                        {new Date(startDate).toLocaleDateString('en-CA')} - {new Date(endDate).toLocaleDateString('en-CA')}
                     </p>
                 </div>
 
