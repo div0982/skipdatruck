@@ -28,7 +28,16 @@ export async function POST(req: NextRequest) {
         // Get truck details
         const truck = await prisma.foodTruck.findUnique({
             where: { id: truckId },
-            include: { owner: true },
+            include: {
+                owner: {
+                    select: {
+                        id: true,
+                        stripeConnectId: true,
+                        stripeOnboarded: true,
+                        businessModel: true,
+                    }
+                }
+            },
         });
 
         if (!truck) {
@@ -70,7 +79,8 @@ export async function POST(req: NextRequest) {
             taxAmount: tax,
             totalPayment: total,
             stripeFee,
-            platformProfit
+            platformProfit,
+            feePercentage
         } = feeBreakdown;
 
         // Calculate merchant payout based on business model
@@ -164,4 +174,35 @@ export async function POST(req: NextRequest) {
         // Update order with payment intent ID
         await prisma.order.update({
             where: { id: order.id },
+<<<<<<< HEAD
 
+=======
+            data: { stripePaymentId: paymentIntent.id },
+        });
+
+        return NextResponse.json({
+            clientSecret: paymentIntent.client_secret,
+            orderId: order.id,
+            orderNumber,
+            breakdown: {
+                businessModel,
+                subtotal,
+                tax,
+                platformFee,
+                stripeFee,
+                platformProfit,
+                merchantPayout,
+                total,
+                feePercentage,
+            },
+        });
+
+    } catch (error: any) {
+        console.error('Payment intent creation failed:', error);
+        return NextResponse.json(
+            { error: error.message || 'Failed to create payment intent' },
+            { status: 500 }
+        );
+    }
+}
+>>>>>>> c089bcb (fix: Restore and fix fee calculation logic with dynamic display)
