@@ -68,11 +68,16 @@ function OrderSuccessContent() {
                 if (paymentIntentId && attempts >= 3) {
                     // After 3 attempts (3 seconds), try to create order from payment intent
                     try {
+                        // Ensure payment intent ID has 'pi_' prefix
+                        const formattedPaymentIntentId = paymentIntentId.startsWith('pi_') 
+                            ? paymentIntentId 
+                            : `pi_${paymentIntentId}`;
+
                         const createResponse = await fetch('/api/orders/create-from-payment', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                paymentIntentId: paymentIntentId.replace('pi_', ''),
+                                paymentIntentId: formattedPaymentIntentId,
                                 orderNumber,
                             }),
                         });
