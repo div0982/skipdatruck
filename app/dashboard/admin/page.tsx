@@ -1,27 +1,138 @@
-// Admin Dashboard  - Overview for platform admins
+// Admin Dashboard - Comprehensive platform oversight
 import { prisma } from '@/lib/db';
 import { formatCurrency } from '@/lib/utils';
-import { TrendingUp, Users, ShoppingBag, DollarSign } from 'lucide-react';
+import { getTaxLabel, getTaxRate } from '@/lib/tax-calculator';
 import Link from 'next/link';
-import DeleteMerchantButton from '@/components/admin/DeleteMerchantButton';
+import AdminDashboardTabs from '@/components/admin/AdminDashboardTabs';
+import { Province } from '@prisma/client';
 
-// Force dynamic rendering - don't try to build this at build time
+// Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
-    // Get stats
-    const totalTrucks = await prisma.foodTruck.count({ where: { isActive: true } });
-    const totalOrders = await prisma.order.count();
+    // Get all trucks with their orders
+    const allTrucks = await prisma.foodTruck.findMany({
+        where: { isActive: true },
+        include: {
+            owner: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    stripeOnboarded: true,
+                },
+            },
+            orders: {
+                where: {
+                    stripeStatus: 'succeeded',
+                    stripePaymentId: { not: null },
+                },
+                select: {
+                    subtotal: true,
+                    tax: true,
+                    platformFee: true,
+                    total: true,
+                },
+            },
+            _count: {
+                select: {
+                    orders: true,
+                },
+            },
+        },
+    });
 
+    // Calculate revenue per truck
+    const truckRevenue = allTrucks.map((truck) => {
+        const totalOrders = truck.orders.length;
+        const totalRevenue = truck.orders.reduce((sum, order) => sum + order.subtotal, 0);
+        const totalTaxCollected = truck.orders.reduce((sum, order) => sum + order.tax, 0);
+        const totalPlatformFees = truck.orders.reduce((sum, order) => sum + order.platformFee, 0);
+        const netRevenue = totalRevenue + totalTaxCollected - totalPlatformFees;
+        const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+        return {
+            truckId: truck.id,
+            truckName: truck.name,
+            ownerName: truck.owner.name,
+            ownerEmail: truck.owner.email,
+            province: truck.province,
+            totalOrders,
+            totalRevenue,
+            totalTaxCollected,
+            totalPlatformFees,
+            netRevenue,
+            averageOrderValue,
+            isActive: truck.isActive,
+            stripeOnboarded: truck.owner.stripeOnboarded,
+        };
+    });
+
+    // Calculate tax audit by province
+    const taxAuditMap = new Map<string, {
+        province: string;
+        taxLabel: string;
+        totalRevenue: number;
+        totalTaxCollected: number;
+        orderCount: number;
+        truckIds: Set<string>;
+    }>();
+
+    allTrucks.forEach((truck) => {
+        const province = truck.province as Province;
+        const taxLabel = getTaxLabel(province);
+        
+        const truckOrders = truck.orders;
+        const provinceRevenue = truckOrders.reduce((sum, order) => sum + order.subtotal, 0);
+        const provinceTax = truckOrders.reduce((sum, order) => sum + order.tax, 0);
+        const orderCount = truckOrders.length;
+
+        if (!taxAuditMap.has(province)) {
+            taxAuditMap.set(province, {
+                province,
+                taxLabel,
+                totalRevenue: 0,
+                totalTaxCollected: 0,
+                orderCount: 0,
+                truckIds: new Set(),
+            });
+        }
+
+        const auditData = taxAuditMap.get(province)!;
+        auditData.totalRevenue += provinceRevenue;
+        auditData.totalTaxCollected += provinceTax;
+        auditData.orderCount += orderCount;
+        auditData.truckIds.add(truck.id);
+    });
+
+    const taxAudit = Array.from(taxAuditMap.values()).map((data) => ({
+        province: data.province,
+        taxLabel: data.taxLabel,
+        totalRevenue: data.totalRevenue,
+        totalTaxCollected: data.totalTaxCollected,
+        orderCount: data.orderCount,
+        truckCount: data.truckIds.size,
+    }));
+
+    // Get total stats
     const allOrders = await prisma.order.findMany({
+        where: {
+            stripeStatus: 'succeeded',
+            stripePaymentId: { not: null },
+        },
         select: {
+            subtotal: true,
+            tax: true,
             platformFee: true,
             total: true,
         },
     });
 
+    const totalTrucks = allTrucks.length;
+    const totalOrders = allOrders.length;
     const totalPlatformRevenue = allOrders.reduce((sum, order) => sum + order.platformFee, 0);
     const totalVolume = allOrders.reduce((sum, order) => sum + order.total, 0);
+    const totalTaxCollected = allOrders.reduce((sum, order) => sum + order.tax, 0);
 
     // Get recent trucks
     const recentTrucks = await prisma.foodTruck.findMany({
@@ -47,6 +158,10 @@ export default async function AdminDashboard() {
     // Get recent orders
     const recentOrders = await prisma.order.findMany({
         take: 10,
+        where: {
+            stripeStatus: 'succeeded',
+            stripePaymentId: { not: null },
+        },
         orderBy: { createdAt: 'desc' },
         include: {
             truck: {
@@ -57,46 +172,15 @@ export default async function AdminDashboard() {
         },
     });
 
-    const stats = [
-        {
-            label: 'Total Trucks',
-            value: totalTrucks,
-            icon: Users,
-            color: 'text-blue-600',
-            bgColor: 'bg-blue-50',
-        },
-        {
-            label: 'Total Orders',
-            value: totalOrders,
-            icon: ShoppingBag,
-            color: 'text-green-600',
-            bgColor: 'bg-green-50',
-        },
-        {
-            label: 'Platform Revenue',
-            value: formatCurrency(totalPlatformRevenue),
-            icon: DollarSign,
-            color: 'text-purple-600',
-            bgColor: 'bg-purple-50',
-        },
-        {
-            label: 'Total Volume',
-            value: formatCurrency(totalVolume),
-            icon: TrendingUp,
-            color: 'text-orange-600',
-            bgColor: 'bg-orange-50',
-        },
-    ];
-
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
-            <div className="bg-white border-b">
+            <div className="bg-white border-b sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-4 py-6">
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-                            <p className="text-sm text-gray-600">Platform Overview</p>
+                            <p className="text-sm text-gray-600">Platform Overview & Analytics</p>
                         </div>
                         <Link
                             href="/"
@@ -108,82 +192,20 @@ export default async function AdminDashboard() {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {stats.map((stat) => {
-                        const Icon = stat.icon;
-                        return (
-                            <div
-                                key={stat.label}
-                                className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
-                                        <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                                    </div>
-                                    <div className={`w-12 h-12 rounded-full ${stat.bgColor} flex items-center justify-center`}>
-                                        <Icon className={`w-6 h-6 ${stat.color}`} />
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Recent Trucks & Orders */}
-                <div className="grid lg:grid-cols-2 gap-6">
-                    {/* Recent Trucks */}
-                    <div className="bg-white rounded-xl p-6 border border-gray-200">
-                        <h2 className="text-lg font-bold mb-4">Recent Trucks</h2>
-                        <div className="space-y-3">
-                            {recentTrucks.map((truck) => (
-                                <div key={truck.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex-1">
-                                        <h3 className="font-semibold text-gray-900">{truck.name}</h3>
-                                        <p className="text-sm text-gray-600">{truck.owner.email}</p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="text-right">
-                                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${truck.owner.stripeOnboarded
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-yellow-100 text-yellow-700'
-                                                }`}>
-                                                {truck.owner.stripeOnboarded ? 'Active' : 'Pending'}
-                                            </div>
-                                            <p className="text-xs text-gray-500 mt-1">{truck._count.orders} orders</p>
-                                        </div>
-                                        <DeleteMerchantButton
-                                            userId={truck.owner.id}
-                                            userName={truck.owner.name || ''}
-                                            userEmail={truck.owner.email}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Recent Orders */}
-                    <div className="bg-white rounded-xl p-6 border border-gray-200">
-                        <h2 className="text-lg font-bold mb-4">Recent Orders</h2>
-                        <div className="space-y-3">
-                            {recentOrders.map((order) => (
-                                <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex-1">
-                                        <h3 className="font-semibold text-gray-900">{order.orderNumber}</h3>
-                                        <p className="text-sm text-gray-600">{order.truck.name}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="font-semibold text-gray-900">{formatCurrency(order.total)}</p>
-                                        <p className="text-xs text-gray-500">{order.status}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+            <div className="max-w-7xl mx-auto px-4 py-6">
+                <AdminDashboardTabs
+                    trucks={truckRevenue}
+                    taxAudit={taxAudit}
+                    totalStats={{
+                        totalTrucks,
+                        totalOrders,
+                        totalPlatformRevenue,
+                        totalVolume,
+                        totalTaxCollected,
+                    }}
+                    recentOrders={recentOrders}
+                    recentTrucks={recentTrucks}
+                />
             </div>
         </div>
     );
