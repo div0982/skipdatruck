@@ -96,26 +96,43 @@ export default function AdminDashboardTabs({
     };
 
     const handleExportTax = (type: 'monthly' | 'quarterly') => {
-        const data = type === 'monthly' ? taxAudit.monthly : taxAudit.quarterly;
-        const periodLabel = type === 'monthly' ? 'Month' : 'Quarter';
-        
-        const csv = [
-            [periodLabel, 'Year', 'Platform Fees (Income)', 'Orders'].join(','),
-            ...data.map(item => [
-                type === 'monthly' ? item.month : item.quarter,
-                item.year,
-                item.platformFees.toFixed(2),
-                item.orderCount,
-            ].join(','))
-        ].join('\n');
+        if (type === 'monthly') {
+            const csv = [
+                ['Month', 'Year', 'Platform Fees (Income)', 'Orders'].join(','),
+                ...taxAudit.monthly.map(item => [
+                    item.month,
+                    item.year,
+                    item.platformFees.toFixed(2),
+                    item.orderCount,
+                ].join(','))
+            ].join('\n');
 
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `platform-revenue-${type}-${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `platform-revenue-monthly-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } else {
+            const csv = [
+                ['Quarter', 'Year', 'Platform Fees (Income)', 'Orders'].join(','),
+                ...taxAudit.quarterly.map(item => [
+                    item.quarter,
+                    item.year,
+                    item.platformFees.toFixed(2),
+                    item.orderCount,
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `platform-revenue-quarterly-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
     };
 
     return (
