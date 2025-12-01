@@ -2,12 +2,15 @@
 
 // Order Tracking Component
 import { useEffect, useState } from 'react';
-import { Order } from '@prisma/client';
 import { Clock, ChefHat, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface OrderTrackingProps {
-    order: Order;
+    order: {
+        id: string;
+        status: string;
+        [key: string]: any;
+    };
 }
 
 export default function OrderTracking({ order: initialOrder }: OrderTrackingProps) {

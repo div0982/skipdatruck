@@ -1,13 +1,27 @@
 'use client';
 
 // Order Details Component
-import { Order, FoodTruck } from '@prisma/client';
 import { formatCurrency } from '@/lib/utils';
 import { Calendar, MapPin, Receipt } from 'lucide-react';
 
 interface OrderDetailsProps {
-    order: Order & {
-        truck: FoodTruck;
+    order: {
+        id: string;
+        orderNumber: string;
+        createdAt: string | Date;
+        truck: {
+            id?: string;
+            name: string;
+            address?: string;
+            logoUrl?: string | null;
+        };
+        items: any;
+        subtotal: number;
+        tax: number;
+        platformFee: number;
+        total: number;
+        status: string;
+        [key: string]: any;
     };
 }
 
@@ -34,7 +48,9 @@ export default function OrderDetails({ order }: OrderDetailsProps) {
                 <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
                     <p className="font-semibold text-gray-900">{order.truck.name}</p>
-                    <p className="text-sm text-gray-600">{order.truck.address}</p>
+                    {order.truck.address && (
+                        <p className="text-sm text-gray-600">{order.truck.address}</p>
+                    )}
                 </div>
             </div>
 
