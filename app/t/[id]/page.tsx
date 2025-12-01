@@ -23,6 +23,11 @@ export default async function TruckPage({ params }: { params: Promise<{ id: stri
                     where: { isAvailable: true },
                     orderBy: { sortOrder: 'asc' },
                 },
+                owner: {
+                    select: {
+                        businessModel: true,
+                    }
+                }
             },
         });
 
@@ -42,7 +47,10 @@ export default async function TruckPage({ params }: { params: Promise<{ id: stri
                         categories={categories}
                         truckId={truck.id}
                     />
-                    <CartDrawer truck={truck} />
+                    <CartDrawer
+                        truck={truck}
+                        businessModel={truck.owner.businessModel || 'MERCHANT_PAYS_FEES'}
+                    />
                 </div>
             </CartProvider>
         );

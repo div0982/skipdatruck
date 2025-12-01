@@ -7,6 +7,8 @@ import { formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { getTaxLabel } from '@/lib/tax-calculator';
 
+import { calculateFees, BusinessModel } from '@/lib/fee-calculator';
+
 interface CartDrawerProps {
     truck: {
         id: string;
@@ -14,9 +16,10 @@ interface CartDrawerProps {
         province: any;
         taxRate: number;
     };
+    businessModel: string;
 }
 
-export default function CartDrawer({ truck }: CartDrawerProps) {
+export default function CartDrawer({ truck, businessModel }: CartDrawerProps) {
     const { items, removeItem, updateQuantity, total, itemCount, isOpen, openCart, closeCart } = useCart();
     const router = useRouter();
 
@@ -120,12 +123,21 @@ export default function CartDrawer({ truck }: CartDrawerProps) {
                     {/* Price Breakdown */}
                     {(() => {
                         const subtotal = total;
-                        // Platform fee will be calculated at checkout based on merchant's business model
-                        // For now, show estimated 3-4%
-                        const estimatedFeePercentage = 0.035; // 3.5% average
-                        const estimatedFee = subtotal * estimatedFeePercentage;
-                        const tax = subtotal * (truck.taxRate || 0.13);
-                        const finalTotal = subtotal + estimatedFee + tax;
+
+                        // Calculate fees dynamically
+                        const feeBreakdown = calculateFees(
+                            subtotal,
+                            truck.taxRate || 0.13,
+                            businessModel as BusinessModel
+                        );
+
+                        const { platformFee, taxAmount: tax, totalPayment: finalTotal, feePercentage } = feeBreakdown;
+
+                        // Determine label
+                        const isMerchantPays = businessModel === BusinessModel.MERCHANT_PAYS_FEES;
+                        const feeLabel = isMerchantPays
+                            ? 'Platform Fee (3%)'
+                            : `Platform Fee (est. ${feePercentage.toFixed(1)}%)`;
 
                         return (
                             <>
@@ -135,8 +147,8 @@ export default function CartDrawer({ truck }: CartDrawerProps) {
                                         <span>{formatCurrency(subtotal)}</span>
                                     </div>
                                     <div className="flex justify-between text-gray-600">
-                                        <span>Platform Fee (est. 3-4%)</span>
-                                        <span>{formatCurrency(estimatedFee)}</span>
+                                        <span>{feeLabel}</span>
+                                        <span>{formatCurrency(platformFee)}</span>
                                     </div>
                                     <div className="flex justify-between text-gray-600">
                                         <span>{getTaxLabel(truck.province)}</span>
