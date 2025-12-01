@@ -32,12 +32,19 @@ interface TruckRevenue {
 }
 
 interface TaxAuditData {
-    province: string;
-    taxLabel: string;
-    totalRevenue: number;
-    totalTaxCollected: number;
-    orderCount: number;
-    truckCount: number;
+    monthly: Array<{
+        month: string;
+        year: number;
+        platformFees: number;
+        orderCount: number;
+        truckCount: number;
+    }>;
+    quarterly: Array<{
+        quarter: string;
+        year: number;
+        platformFees: number;
+        orderCount: number;
+    }>;
 }
 
 interface AdminDashboardTabsProps {
@@ -88,16 +95,17 @@ export default function AdminDashboardTabs({
         window.URL.revokeObjectURL(url);
     };
 
-    const handleExportTax = () => {
+    const handleExportTax = (type: 'monthly' | 'quarterly') => {
+        const data = type === 'monthly' ? taxAudit.monthly : taxAudit.quarterly;
+        const periodLabel = type === 'monthly' ? 'Month' : 'Quarter';
+        
         const csv = [
-            ['Province', 'Tax Type', 'Total Revenue', 'Tax Collected', 'Orders', 'Trucks'].join(','),
-            ...taxAudit.map(data => [
-                data.province,
-                data.taxLabel,
-                data.totalRevenue.toFixed(2),
-                data.totalTaxCollected.toFixed(2),
-                data.orderCount,
-                data.truckCount,
+            [periodLabel, 'Year', 'Platform Fees (Income)', 'Orders'].join(','),
+            ...data.map(item => [
+                type === 'monthly' ? item.month : item.quarter,
+                item.year,
+                item.platformFees.toFixed(2),
+                item.orderCount,
             ].join(','))
         ].join('\n');
 
@@ -105,7 +113,7 @@ export default function AdminDashboardTabs({
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `tax-audit-${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `platform-revenue-${type}-${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
     };
@@ -190,7 +198,7 @@ export default function AdminDashboardTabs({
                 {activeTab === 'tax' && (
                     <TaxAuditTab 
                         taxAudit={taxAudit}
-                        onExport={handleExportTax}
+                        onExport={(type) => handleExportTax(type)}
                     />
                 )}
 
@@ -426,41 +434,75 @@ function RevenueTab({ trucks, onExport }: { trucks: TruckRevenue[]; onExport: ()
     );
 }
 
-function TaxAuditTab({ taxAudit, onExport }: { taxAudit: TaxAuditData[]; onExport: () => void }) {
-    const totalTax = taxAudit.reduce((sum, data) => sum + data.totalTaxCollected, 0);
-    const totalRevenue = taxAudit.reduce((sum, data) => sum + data.totalRevenue, 0);
+function TaxAuditTab({ taxAudit, onExport }: { taxAudit: TaxAuditData; onExport: (type: 'monthly' | 'quarterly') => void }) {
+    const totalPlatformFees = taxAudit.monthly.reduce((sum, data) => sum + data.platformFees, 0);
+    const currentYear = new Date().getFullYear();
+    const currentYearRevenue = taxAudit.monthly
+        .filter(data => data.year === currentYear)
+        .reduce((sum, data) => sum + data.platformFees, 0);
+    const totalOrders = taxAudit.monthly.reduce((sum, data) => sum + data.orderCount, 0);
 
     return (
         <div className="space-y-6">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Summary Cards - Platform Revenue for Tax Filing */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white rounded-xl p-6 border border-gray-200">
-                    <p className="text-sm text-gray-600 mb-1">Total Tax Collected</p>
-                    <p className="text-2xl font-bold text-red-600">{formatCurrency(totalTax)}</p>
+                    <p className="text-sm text-gray-600 mb-1">Total Platform Revenue</p>
+                    <p className="text-2xl font-bold text-purple-600">{formatCurrency(totalPlatformFees)}</p>
+                    <p className="text-xs text-gray-500 mt-1">All time income</p>
                 </div>
                 <div className="bg-white rounded-xl p-6 border border-gray-200">
-                    <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
-                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalRevenue)}</p>
+                    <p className="text-sm text-gray-600 mb-1">{currentYear} Revenue</p>
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(currentYearRevenue)}</p>
+                    <p className="text-xs text-gray-500 mt-1">For tax filing</p>
                 </div>
                 <div className="bg-white rounded-xl p-6 border border-gray-200">
-                    <p className="text-sm text-gray-600 mb-1">Provinces</p>
-                    <p className="text-2xl font-bold text-gray-900">{taxAudit.length}</p>
+                    <p className="text-sm text-gray-600 mb-1">Total Transactions</p>
+                    <p className="text-2xl font-bold text-gray-900">{totalOrders.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500 mt-1">Orders processed</p>
+                </div>
+                <div className="bg-white rounded-xl p-6 border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-1">Avg per Transaction</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                        {totalOrders > 0 ? formatCurrency(totalPlatformFees / totalOrders) : '$0.00'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Platform fee average</p>
                 </div>
             </div>
 
-            {/* Tax Audit Table */}
+            {/* Tax Filing Information */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                    <FileText className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+                    <div>
+                        <h3 className="text-lg font-bold text-blue-900 mb-2">Tax Filing Information</h3>
+                        <p className="text-sm text-blue-800 mb-3">
+                            This page shows your <strong>platform revenue (fees collected)</strong> which is your business income for tax purposes.
+                            Use the monthly or quarterly breakdowns below to report your income when filing taxes.
+                        </p>
+                        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                            <li>Platform fees = Your business income (report on Schedule C or T2125)</li>
+                            <li>Export monthly/quarterly data for your accountant</li>
+                            <li>Keep records of all transactions for CRA audits</li>
+                            <li>Consider business expenses (hosting, Stripe fees, etc.) separately</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            {/* Monthly Breakdown */}
             <div className="bg-white rounded-xl border border-gray-200">
                 <div className="p-6 border-b border-gray-200 flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-bold text-gray-900">Tax Audit by Province</h2>
-                        <p className="text-sm text-gray-600 mt-1">Tax collection breakdown by province</p>
+                        <h2 className="text-lg font-bold text-gray-900">Monthly Revenue Breakdown</h2>
+                        <p className="text-sm text-gray-600 mt-1">Platform fees collected by month (for tax filing)</p>
                     </div>
                     <button
-                        onClick={onExport}
+                        onClick={() => onExport('monthly')}
                         className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
                     >
                         <Download className="w-4 h-4" />
-                        Export CSV
+                        Export Monthly CSV
                     </button>
                 </div>
 
@@ -469,53 +511,111 @@ function TaxAuditTab({ taxAudit, onExport }: { taxAudit: TaxAuditData[]; onExpor
                         <thead className="bg-gray-50">
                             <tr>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Province
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Tax Type
+                                    Month
                                 </th>
                                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Total Revenue
+                                    Platform Fees (Income)
                                 </th>
                                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Tax Collected
+                                    Transactions
                                 </th>
                                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Orders
-                                </th>
-                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Trucks
+                                    Avg per Transaction
                                 </th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {taxAudit.length > 0 ? (
-                                taxAudit.map((data) => (
-                                    <tr key={data.province} className="hover:bg-gray-50">
+                            {taxAudit.monthly.length > 0 ? (
+                                taxAudit.monthly.map((data) => (
+                                    <tr key={data.month} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">
-                                            {data.province}
+                                            {data.month}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                            {data.taxLabel}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
-                                            {formatCurrency(data.totalRevenue)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-red-600">
-                                            {formatCurrency(data.totalTaxCollected)}
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-purple-600">
+                                            {formatCurrency(data.platformFees)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700">
                                             {data.orderCount}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700">
-                                            {data.truckCount}
+                                            {data.orderCount > 0 
+                                                ? formatCurrency(data.platformFees / data.orderCount)
+                                                : '$0.00'
+                                            }
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
-                                        No tax data available
+                                    <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-500">
+                                        No revenue data available
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Quarterly Breakdown */}
+            <div className="bg-white rounded-xl border border-gray-200">
+                <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-900">Quarterly Revenue Breakdown</h2>
+                        <p className="text-sm text-gray-600 mt-1">Platform fees by quarter (useful for GST/HST returns)</p>
+                    </div>
+                    <button
+                        onClick={() => onExport('quarterly')}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+                    >
+                        <Download className="w-4 h-4" />
+                        Export Quarterly CSV
+                    </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Quarter
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Platform Fees (Income)
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Transactions
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Avg per Transaction
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {taxAudit.quarterly.length > 0 ? (
+                                taxAudit.quarterly.map((data) => (
+                                    <tr key={data.quarter} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">
+                                            {data.quarter}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-purple-600">
+                                            {formatCurrency(data.platformFees)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700">
+                                            {data.orderCount}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700">
+                                            {data.orderCount > 0 
+                                                ? formatCurrency(data.platformFees / data.orderCount)
+                                                : '$0.00'
+                                            }
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-500">
+                                        No revenue data available
                                     </td>
                                 </tr>
                             )}

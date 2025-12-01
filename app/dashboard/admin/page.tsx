@@ -68,51 +68,73 @@ export default async function AdminDashboard() {
         };
     });
 
-    // Calculate tax audit by province
-    const taxAuditMap = new Map<string, {
-        province: string;
-        taxLabel: string;
-        totalRevenue: number;
-        totalTaxCollected: number;
+    // Calculate platform revenue (fees) by month for tax filing
+    const monthlyRevenue = new Map<string, {
+        month: string;
+        year: number;
+        platformFees: number;
         orderCount: number;
-        truckIds: Set<string>;
+        truckCount: number;
     }>();
 
-    allTrucks.forEach((truck) => {
-        const province = truck.province as Province;
-        const taxLabel = getTaxLabel(province);
+    allOrders.forEach((order) => {
+        const orderDate = new Date(order.createdAt || new Date());
+        const monthKey = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+        const monthLabel = orderDate.toLocaleDateString('en-CA', { year: 'numeric', month: 'long' });
         
-        const truckOrders = truck.orders;
-        const provinceRevenue = truckOrders.reduce((sum, order) => sum + order.subtotal, 0);
-        const provinceTax = truckOrders.reduce((sum, order) => sum + order.tax, 0);
-        const orderCount = truckOrders.length;
-
-        if (!taxAuditMap.has(province)) {
-            taxAuditMap.set(province, {
-                province,
-                taxLabel,
-                totalRevenue: 0,
-                totalTaxCollected: 0,
+        if (!monthlyRevenue.has(monthKey)) {
+            monthlyRevenue.set(monthKey, {
+                month: monthLabel,
+                year: orderDate.getFullYear(),
+                platformFees: 0,
                 orderCount: 0,
-                truckIds: new Set(),
+                truckCount: 0,
             });
         }
 
-        const auditData = taxAuditMap.get(province)!;
-        auditData.totalRevenue += provinceRevenue;
-        auditData.totalTaxCollected += provinceTax;
-        auditData.orderCount += orderCount;
-        auditData.truckIds.add(truck.id);
+        const monthData = monthlyRevenue.get(monthKey)!;
+        monthData.platformFees += order.platformFee;
+        monthData.orderCount += 1;
     });
 
-    const taxAudit = Array.from(taxAuditMap.values()).map((data) => ({
-        province: data.province,
-        taxLabel: data.taxLabel,
-        totalRevenue: data.totalRevenue,
-        totalTaxCollected: data.totalTaxCollected,
-        orderCount: data.orderCount,
-        truckCount: data.truckIds.size,
-    }));
+    // Calculate quarterly breakdown
+    const quarterlyRevenue = new Map<string, {
+        quarter: string;
+        year: number;
+        platformFees: number;
+        orderCount: number;
+    }>();
+
+    allOrders.forEach((order) => {
+        const orderDate = new Date(order.createdAt || new Date());
+        const quarter = Math.floor(orderDate.getMonth() / 3) + 1;
+        const quarterKey = `${orderDate.getFullYear()}-Q${quarter}`;
+        const quarterLabel = `Q${quarter} ${orderDate.getFullYear()}`;
+        
+        if (!quarterlyRevenue.has(quarterKey)) {
+            quarterlyRevenue.set(quarterKey, {
+                quarter: quarterLabel,
+                year: orderDate.getFullYear(),
+                platformFees: 0,
+                orderCount: 0,
+            });
+        }
+
+        const quarterData = quarterlyRevenue.get(quarterKey)!;
+        quarterData.platformFees += order.platformFee;
+        quarterData.orderCount += 1;
+    });
+
+    const taxAudit = {
+        monthly: Array.from(monthlyRevenue.values()).sort((a, b) => {
+            if (a.year !== b.year) return b.year - a.year;
+            return b.month.localeCompare(a.month);
+        }),
+        quarterly: Array.from(quarterlyRevenue.values()).sort((a, b) => {
+            if (a.year !== b.year) return b.year - a.year;
+            return b.quarter.localeCompare(a.quarter);
+        }),
+    };
 
     // Get total stats
     const allOrders = await prisma.order.findMany({
@@ -125,6 +147,7 @@ export default async function AdminDashboard() {
             tax: true,
             platformFee: true,
             total: true,
+            createdAt: true,
         },
     });
 
