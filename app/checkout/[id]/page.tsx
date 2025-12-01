@@ -36,13 +36,6 @@ interface CartData {
     province: Province;
     taxRate: number;
 }
-<<<<<<< HEAD
-orderId = { orderId }
-truckId = { cartData.truckId }
-total = { feeBreakdown.total }
-    />
-                    </Elements >
-=======
 
 interface FeeBreakdown {
     subtotal: number;
@@ -183,9 +176,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ id: string 
                             total={feeBreakdown.total}
                         />
                     </Elements>
->>>>>>> a284e62
                 )}
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }
