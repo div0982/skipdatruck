@@ -36,18 +36,30 @@ export default function CheckoutForm({ orderId, truckId, total }: CheckoutFormPr
         setErrorMessage('');
 
         try {
-            const { error } = await stripe.confirmPayment({
+            const { error, paymentIntent } = await stripe.confirmPayment({
                 elements,
                 confirmParams: {
                     // Redirect to a success page - order will be created by webhook
                     // We'll need to find the order by payment intent ID or order number
                     return_url: `${window.location.origin}/order/success?orderNumber=${orderId}`,
                 },
+                redirect: 'if_required', // Don't redirect automatically, handle it manually
             });
 
             if (error) {
                 setErrorMessage(error.message || 'Payment failed');
                 setLoading(false);
+                return;
+            }
+
+            // If payment succeeded, store payment intent ID and redirect
+            if (paymentIntent?.id && paymentIntent.status === 'succeeded') {
+                sessionStorage.setItem('lastPaymentIntentId', paymentIntent.id);
+                // Redirect to success page
+                router.push(`/order/success?orderNumber=${orderId}&payment_intent=${paymentIntent.id}`);
+            } else if (paymentIntent?.status === 'requires_action') {
+                // Payment requires additional action (e.g., 3D Secure)
+                // Stripe will handle the redirect automatically
             }
         } catch (error) {
             setErrorMessage('An unexpected error occurred');

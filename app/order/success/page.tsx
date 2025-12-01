@@ -33,8 +33,15 @@ function OrderSuccessContent() {
     useEffect(() => {
         if (!orderNumber) return;
 
+        // Get payment intent ID from URL or session storage
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentIntentId = urlParams.get('payment_intent') || 
+                               urlParams.get('payment_intent_client_secret')?.split('_secret_')[0] ||
+                               sessionStorage.getItem('lastPaymentIntentId');
+
         const fetchOrder = async () => {
             try {
+                // First, try to find the order
                 const response = await fetch(`/api/orders?orderNumber=${orderNumber}`);
                 if (response.ok) {
                     const orders = await response.json();
@@ -44,7 +51,36 @@ function OrderSuccessContent() {
                         setLoading(false);
                         // Clear cart
                         sessionStorage.removeItem('cart');
+                        sessionStorage.removeItem('lastPaymentIntentId');
                         return;
+                    }
+                }
+
+                // If order not found and we have payment intent ID, try fallback creation
+                if (paymentIntentId && attempts >= 3) {
+                    // After 3 attempts (3 seconds), try to create order from payment intent
+                    try {
+                        const createResponse = await fetch('/api/orders/create-from-payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                paymentIntentId: paymentIntentId.replace('pi_', ''),
+                                orderNumber,
+                            }),
+                        });
+
+                        if (createResponse.ok) {
+                            const data = await createResponse.json();
+                            if (data.order) {
+                                setOrder(data.order);
+                                setLoading(false);
+                                sessionStorage.removeItem('cart');
+                                sessionStorage.removeItem('lastPaymentIntentId');
+                                return;
+                            }
+                        }
+                    } catch (createError) {
+                        console.error('Failed to create order from payment intent:', createError);
                     }
                 }
             } catch (error) {
