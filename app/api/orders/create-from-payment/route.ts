@@ -6,8 +6,13 @@ import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
+    let orderNumber: string | undefined;
+    let paymentIntentId: string | undefined;
+    
     try {
-        const { paymentIntentId, orderNumber } = await req.json();
+        const body = await req.json();
+        paymentIntentId = body.paymentIntentId;
+        orderNumber = body.orderNumber;
 
         if (!paymentIntentId || !orderNumber) {
             return NextResponse.json(
@@ -159,7 +164,7 @@ export async function POST(req: NextRequest) {
         
         // If it's a unique constraint error, the order likely already exists
         // Try to fetch and return it
-        if (error.code === 'P2002' || error.message?.includes('Unique constraint')) {
+        if ((error.code === 'P2002' || error.message?.includes('Unique constraint')) && orderNumber) {
             console.log(`[FALLBACK] Order already exists (unique constraint). Fetching existing order...`);
             try {
                 const existingOrder = await prisma.order.findUnique({
