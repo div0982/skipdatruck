@@ -3,7 +3,7 @@
 // Order Success Page - Shows order confirmation after payment
 // Polls for order by orderNumber (order is created by webhook after payment)
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OrderDetails from '@/components/order/OrderDetails';
 import OrderTracking from '@/components/order/OrderTracking';
@@ -29,6 +29,8 @@ function OrderSuccessContent() {
     const [loading, setLoading] = useState(true);
     const [attempts, setAttempts] = useState(0);
     const maxAttempts = 20; // Poll for up to 20 seconds (20 * 1 second)
+    const fallbackCalledRef = useRef(false); // Track if we've already called the fallback
+    const pollingStoppedRef = useRef(false); // Track if we've stopped polling
 
     useEffect(() => {
         if (!orderNumber) return;
@@ -48,6 +50,11 @@ function OrderSuccessContent() {
         }
 
         const fetchOrder = async () => {
+            // Stop polling if we've already found the order or stopped polling
+            if (pollingStoppedRef.current || order) {
+                return;
+            }
+
             try {
                 // First, try to find the order
                 const response = await fetch(`/api/orders?orderNumber=${orderNumber}`);
@@ -58,6 +65,7 @@ function OrderSuccessContent() {
                         console.log(`✅ Order found via webhook: ${orderNumber} (Attempt ${attempts + 1})`);
                         setOrder(foundOrder);
                         setLoading(false);
+                        pollingStoppedRef.current = true; // Stop polling
                         // Clear cart
                         sessionStorage.removeItem('cart');
                         sessionStorage.removeItem('lastPaymentIntentId');
@@ -65,8 +73,11 @@ function OrderSuccessContent() {
                     }
                 }
 
-                // If order not found and we have payment intent ID, try fallback creation
-                if (paymentIntentId && attempts >= 3) {
+                // If order not found and we have payment intent ID, try fallback creation (ONLY ONCE)
+                if (paymentIntentId && attempts >= 3 && !fallbackCalledRef.current) {
+                    // Mark that we've called the fallback to prevent duplicate calls
+                    fallbackCalledRef.current = true;
+                    
                     // After 3 attempts (3 seconds), try to create order from payment intent
                     console.log(`⚠️ Order not found after ${attempts + 1} attempts. Using FALLBACK to create order from payment intent...`);
                     console.log(`📋 Payment Intent ID: ${paymentIntentId}`);
@@ -97,6 +108,7 @@ function OrderSuccessContent() {
                                 console.log(`📦 Order Number: ${data.order.orderNumber}`);
                                 setOrder(data.order);
                                 setLoading(false);
+                                pollingStoppedRef.current = true; // Stop polling
                                 sessionStorage.removeItem('cart');
                                 sessionStorage.removeItem('lastPaymentIntentId');
                                 return;
@@ -105,7 +117,15 @@ function OrderSuccessContent() {
                             }
                         } else {
                             const errorData = await createResponse.json().catch(() => ({ error: 'Unknown error' }));
-                            console.error(`❌ FALLBACK FAILED: ${errorData.error || 'Unknown error'}`);
+                            const errorMessage = errorData.error || 'Unknown error';
+                            console.error(`❌ FALLBACK FAILED: ${errorMessage}`);
+                            
+                            // If the error is "order already exists", that's actually fine - the webhook probably created it
+                            // Continue polling to find it
+                            if (errorMessage.includes('Unique constraint') || errorMessage.includes('already exists')) {
+                                console.log(`ℹ️ Order already exists (likely created by webhook). Continuing to poll...`);
+                                fallbackCalledRef.current = false; // Allow retry if needed, but we'll continue polling
+                            }
                         }
                     } catch (createError) {
                         console.error('❌ FALLBACK ERROR: Failed to create order from payment intent:', createError);
@@ -120,11 +140,12 @@ function OrderSuccessContent() {
             }
 
             // If not found and haven't exceeded max attempts, try again
-            if (attempts < maxAttempts) {
+            if (!pollingStoppedRef.current && attempts < maxAttempts) {
                 setAttempts(prev => prev + 1);
                 setTimeout(fetchOrder, 1000); // Poll every 1 second
             } else {
                 setLoading(false);
+                pollingStoppedRef.current = true;
             }
         };
 

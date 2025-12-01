@@ -156,6 +156,46 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('Failed to create order from payment intent:', error);
+        
+        // If it's a unique constraint error, the order likely already exists
+        // Try to fetch and return it
+        if (error.code === 'P2002' || error.message?.includes('Unique constraint')) {
+            console.log(`[FALLBACK] Order already exists (unique constraint). Fetching existing order...`);
+            try {
+                const existingOrder = await prisma.order.findUnique({
+                    where: { orderNumber },
+                    include: {
+                        truck: {
+                            select: {
+                                id: true,
+                                name: true,
+                                address: true,
+                                logoUrl: true,
+                            },
+                        },
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                            },
+                        },
+                    },
+                });
+                
+                if (existingOrder) {
+                    console.log(`[FALLBACK] ✅ Found existing order: ${existingOrder.orderNumber}`);
+                    return NextResponse.json({
+                        success: true,
+                        order: existingOrder,
+                        message: 'Order already exists (created by webhook)',
+                    });
+                }
+            } catch (fetchError) {
+                console.error('[FALLBACK] Failed to fetch existing order:', fetchError);
+            }
+        }
+        
         return NextResponse.json(
             { error: error.message || 'Failed to create order' },
             { status: 500 }
