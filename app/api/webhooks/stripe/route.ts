@@ -40,7 +40,43 @@ export async function POST(req: NextRequest) {
                 // Create order NOW that payment has succeeded
                 // Parse order data from metadata
                 const metadata = paymentIntent.metadata;
-                const items = JSON.parse(metadata.items || '[]');
+                
+                // Reconstruct items from metadata (handles both single field and chunked format)
+                let items: any[] = [];
+                if (metadata.items) {
+                    // Single items field (small orders)
+                    try {
+                        items = JSON.parse(metadata.items);
+                    } catch (e) {
+                        console.error('[WEBHOOK] Failed to parse items from metadata.items:', e);
+                    }
+                } else if (metadata.itemCount) {
+                    // Chunked format (large orders)
+                    try {
+                        const itemCount = parseInt(metadata.itemCount);
+                        let allItemsJson = '';
+                        let chunkIndex = 0;
+                        while (metadata[`items_${chunkIndex}`]) {
+                            if (allItemsJson) allItemsJson += ',';
+                            allItemsJson += metadata[`items_${chunkIndex}`];
+                            chunkIndex++;
+                        }
+                        // Parse as JSON array
+                        items = JSON.parse(`[${allItemsJson}]`);
+                    } catch (e) {
+                        console.error('[WEBHOOK] Failed to parse chunked items from metadata:', e);
+                    }
+                }
+
+                // Transform minimal items back to full format for order storage
+                // Items are stored as: { id, qty, price, name? }
+                // We need: { menuItemId, name, price, quantity }
+                const fullItems = items.map((item: any) => ({
+                    menuItemId: item.id,
+                    name: item.name || `Item ${item.id}`,
+                    price: parseFloat(item.price),
+                    quantity: item.qty || item.quantity || 1,
+                }));
 
                 const order = await prisma.order.create({
                     data: {
@@ -50,7 +86,7 @@ export async function POST(req: NextRequest) {
                         customerName: metadata.customerName || null,
                         customerEmail: metadata.customerEmail || null,
                         customerPhone: metadata.customerPhone || null,
-                        items: items,
+                        items: fullItems,
                         subtotal: parseFloat(metadata.subtotal),
                         tax: parseFloat(metadata.tax),
                         platformFee: parseFloat(metadata.platformFee),

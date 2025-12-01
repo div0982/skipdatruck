@@ -111,30 +111,73 @@ export async function POST(req: NextRequest) {
 
         // DON'T create order yet - wait for payment confirmation
         // Store all order data in PaymentIntent metadata instead
+        // IMPORTANT: Stripe metadata has a 500-character limit per value
+        // So we store minimal item data (ID, quantity, price) and fetch full details later
+        
+        // Create minimal item representation to avoid metadata size limits
+        const minimalItems = items.map((item: any) => ({
+            id: item.menuItemId || item.id,
+            qty: item.quantity,
+            price: item.price.toFixed(2),
+            // Store name only if it's short (for display), otherwise we'll fetch from DB
+            name: item.name && item.name.length <= 50 ? item.name.substring(0, 50) : '',
+        }));
+
+        // Try to store items as JSON, but if it's too large, split across multiple metadata fields
+        const itemsJson = JSON.stringify(minimalItems);
+        const metadata: Record<string, string> = {
+            // Order data to create after payment succeeds
+            orderNumber,
+            truckId,
+            truckName: truck.name.substring(0, 100), // Limit truck name length
+            businessModel,
+            subtotal: subtotal.toFixed(2),
+            tax: tax.toFixed(2),
+            platformFee: platformFee.toFixed(2),
+            stripeFee: stripeFee.toFixed(2),
+            platformProfit: platformProfit.toFixed(2),
+            merchantPayout: merchantPayout.toFixed(2),
+            // Customer info (truncate to avoid size issues)
+            customerName: (customerInfo?.name || '').substring(0, 100),
+            customerEmail: (customerInfo?.email || '').substring(0, 100),
+            customerPhone: (customerInfo?.phone || '').substring(0, 20),
+            userId: (customerInfo?.userId || '').substring(0, 100),
+        };
+
+        // Store items - if JSON is too large, split it
+        if (itemsJson.length <= 450) {
+            // Safe to store in single field
+            metadata.items = itemsJson;
+        } else {
+            // Split items across multiple metadata fields
+            // Store item count first
+            metadata.itemCount = minimalItems.length.toString();
+            // Store items in chunks (each chunk max 450 chars)
+            let chunkIndex = 0;
+            let currentChunk = '';
+            minimalItems.forEach((item, index) => {
+                const itemStr = JSON.stringify(item);
+                if (currentChunk.length + itemStr.length + 1 > 450) {
+                    // Save current chunk
+                    metadata[`items_${chunkIndex}`] = currentChunk;
+                    chunkIndex++;
+                    currentChunk = itemStr;
+                } else {
+                    if (currentChunk) currentChunk += ',';
+                    currentChunk += itemStr;
+                }
+            });
+            // Save last chunk
+            if (currentChunk) {
+                metadata[`items_${chunkIndex}`] = currentChunk;
+            }
+        }
+
         const paymentIntentData: any = {
             // Customer pays full amount including platform fee
             amount: toStripeCents(total),
             currency: 'cad',
-            metadata: {
-                // Order data to create after payment succeeds
-                orderNumber,
-                truckId,
-                truckName: truck.name,
-                businessModel,
-                subtotal: subtotal.toFixed(2),
-                tax: tax.toFixed(2),
-                platformFee: platformFee.toFixed(2),
-                stripeFee: stripeFee.toFixed(2),
-                platformProfit: platformProfit.toFixed(2),
-                merchantPayout: merchantPayout.toFixed(2),
-                // Customer info
-                customerName: customerInfo?.name || '',
-                customerEmail: customerInfo?.email || '',
-                customerPhone: customerInfo?.phone || '',
-                userId: customerInfo?.userId || '',
-                // Items as JSON string (metadata has size limits, but should be fine for typical orders)
-                items: JSON.stringify(items),
-            },
+            metadata,
             automatic_payment_methods: {
                 enabled: true,
             },

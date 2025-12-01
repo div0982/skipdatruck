@@ -53,15 +53,28 @@ export default function CheckoutForm({ orderId, truckId, total }: CheckoutFormPr
             }
 
             // If payment succeeded, store payment intent ID and redirect
-            if (paymentIntent?.id && paymentIntent.status === 'succeeded') {
-                sessionStorage.setItem('lastPaymentIntentId', paymentIntent.id);
-                // Redirect to success page
-                router.push(`/order/success?orderNumber=${orderId}&payment_intent=${paymentIntent.id}`);
-            } else if (paymentIntent?.status === 'requires_action') {
-                // Payment requires additional action (e.g., 3D Secure)
-                // Stripe will handle the redirect automatically
+            if (paymentIntent) {
+                // Store payment intent ID for fallback mechanism
+                if (paymentIntent.id) {
+                    sessionStorage.setItem('lastPaymentIntentId', paymentIntent.id);
+                }
+
+                if (paymentIntent.status === 'succeeded') {
+                    // Payment succeeded - redirect to success page
+                    // Use window.location for a hard redirect to ensure it happens
+                    window.location.href = `/order/success?orderNumber=${orderId}&payment_intent=${paymentIntent.id}`;
+                } else if (paymentIntent.status === 'requires_action') {
+                    // Payment requires additional action (e.g., 3D Secure)
+                    // Stripe will handle the redirect automatically via return_url
+                    // But we should still wait for it
+                    console.log('Payment requires action, waiting for redirect...');
+                } else {
+                    // Other status - still redirect to success page, it will poll for the order
+                    window.location.href = `/order/success?orderNumber=${orderId}&payment_intent=${paymentIntent.id}`;
+                }
             }
         } catch (error) {
+            console.error('Payment error:', error);
             setErrorMessage('An unexpected error occurred');
             setLoading(false);
         }

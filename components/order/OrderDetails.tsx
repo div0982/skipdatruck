@@ -44,15 +44,17 @@ export default function OrderDetails({ order }: OrderDetailsProps) {
             </div>
 
             {/* Truck Info */}
-            <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-                <div>
-                    <p className="font-semibold text-gray-900">{order.truck.name}</p>
-                    {order.truck.address && (
-                        <p className="text-sm text-gray-600">{order.truck.address}</p>
-                    )}
+            {order.truck && (
+                <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                        <p className="font-semibold text-gray-900">{order.truck.name || 'Food Truck'}</p>
+                        {order.truck.address && (
+                            <p className="text-sm text-gray-600">{order.truck.address}</p>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Order Time */}
             <div className="flex items-center gap-2 text-sm text-gray-600">
