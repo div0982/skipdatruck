@@ -164,31 +164,4 @@ export async function POST(req: NextRequest) {
         // Update order with payment intent ID
         await prisma.order.update({
             where: { id: order.id },
-            data: { stripePaymentId: paymentIntent.id },
-        });
-
-        return NextResponse.json({
-            clientSecret: paymentIntent.client_secret,
-            orderId: order.id,
-            orderNumber,
-            breakdown: {
-                businessModel,
-                subtotal,
-                tax,
-                platformFee,
-                stripeFee,
-                platformProfit,
-                merchantPayout,
-                total,
-            },
-        });
-
-    } catch (error: any) {
-        console.error('Payment intent creation failed:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to create payment intent' },
-            { status: 500 }
-        );
-    }
-}
 

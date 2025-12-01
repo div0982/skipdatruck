@@ -17,6 +17,8 @@ interface OrderSummaryProps {
     platformFee: number;
     total: number;
     province: Province;
+    businessModel?: string;
+    feePercentage?: number;
 }
 
 export default function OrderSummary({
@@ -26,8 +28,17 @@ export default function OrderSummary({
     platformFee,
     total,
     province,
+    businessModel,
+    feePercentage,
 }: OrderSummaryProps) {
     const taxLabel = getTaxLabel(province);
+
+    // Determine fee label based on business model
+    const isMerchantPays = businessModel === 'MERCHANT_PAYS_FEES';
+    const feeLabel = isMerchantPays ? 'Platform Fee (3%)' : 'Platform Fee (Dynamic)';
+    const feeTooltip = isMerchantPays
+        ? 'Flat 3% commission - Merchant pays Stripe fees'
+        : `Dynamic tiered fee (${feePercentage?.toFixed(1)}%) - Platform absorbs Stripe costs`;
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
@@ -61,11 +72,11 @@ export default function OrderSummary({
 
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-1">
-                        <span className="text-gray-600">Service Fee</span>
+                        <span className="text-gray-600">{feeLabel}</span>
                         <div className="group relative">
                             <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 p-2 bg-gray-900 text-white text-xs rounded-lg">
-                                Platform service fee: 4% + $0.10 CAD
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-2 bg-gray-900 text-white text-xs rounded-lg z-10">
+                                {feeTooltip}
                             </div>
                         </div>
                     </div>
