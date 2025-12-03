@@ -11,8 +11,14 @@ interface LiveOrdersProps {
     truckId: string;
 }
 
+// Extended Order type with pickup code (until DB migration completes)
+type OrderWithPickupCode = Order & {
+    pickupCode?: string | null;
+};
+
+
 export default function LiveOrders({ truckId }: LiveOrdersProps) {
-    const [orders, setOrders] = useState<Order[]>([]);
+    const [orders, setOrders] = useState<OrderWithPickupCode[]>([]);
     const [loading, setLoading] = useState(true);
     const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
     const [pickupCodeInput, setPickupCodeInput] = useState('');
