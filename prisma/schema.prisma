@@ -150,6 +150,9 @@ model Order {
   stripePaymentId   String?     @unique
   stripeStatus      String?     // payment_intent status
   
+  // Pickup code for verification
+  pickupCode        String?     // 4-digit verification code
+  
   // Order status
   status            OrderStatus @default(PENDING)
   
@@ -157,6 +160,9 @@ model Order {
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
   completedAt       DateTime?
+  
+  // Relations
+  pickupEvent       PickupEvent?
   
   @@index([truckId, status])
   @@index([orderNumber])
@@ -166,8 +172,24 @@ enum OrderStatus {
   PENDING       // Payment received, waiting to be acknowledged
   PREPARING     // Truck is preparing the order
   READY         // Order is ready for pickup
-  COMPLETED     // Order has been picked up
+  PICKED_UP     // Customer picked up order (with code verification)
+  COMPLETED     // Order completed
   CANCELLED     // Order was cancelled
+}
+
+
+// Pickup Event - Evidence of order pickup
+model PickupEvent {
+  id        String @id @default(uuid())
+  orderId   String @unique
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  staffName String?  // Staff member who confirmed pickup
+  pickedAt  DateTime @default(now())
+  photoUrl  String?  // Photo evidence (optional)
+  notes     String?  // Optional notes from staff
+  
+  @@index([orderId])
 }
 
 // NextAuth.js Models

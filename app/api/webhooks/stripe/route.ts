@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/db';
+import { generatePickupCode } from '@/lib/pickup-codes';
 import Stripe from 'stripe';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
                 // Create order NOW that payment has succeeded
                 // Parse order data from metadata
                 const metadata = paymentIntent.metadata;
-                
+
                 // Reconstruct items from metadata (handles both single field and chunked format)
                 let items: any[] = [];
                 if (metadata.items) {
@@ -78,6 +79,9 @@ export async function POST(req: NextRequest) {
                     quantity: item.qty || item.quantity || 1,
                 }));
 
+                // Generate pickup code
+                const pickupCode = generatePickupCode();
+
                 const order = await prisma.order.create({
                     data: {
                         orderNumber: metadata.orderNumber,
@@ -93,11 +97,12 @@ export async function POST(req: NextRequest) {
                         total: paymentIntent.amount / 100, // Convert from cents
                         stripePaymentId: paymentIntent.id,
                         stripeStatus: paymentIntent.status,
+                        pickupCode, // Add pickup code
                         status: 'PENDING', // Order is now pending acknowledgment by truck
                     },
                 });
 
-                console.log(`[WEBHOOK] ✅ Payment succeeded - Order created: ${order.orderNumber} (${order.id})`);
+                console.log(`[WEBHOOK] ✅ Payment succeeded - Order created: ${order.orderNumber} (${order.id}) - Pickup Code: ${pickupCode}`);
                 break;
             }
 

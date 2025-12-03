@@ -82,7 +82,14 @@ export default function CartProvider({ children, truck }: CartProviderProps) {
     };
 
     const removeItem = (itemId: string) => {
-        setItems((current) => current.filter((i) => i.id !== itemId));
+        setItems((current) => {
+            const filtered = current.filter((i) => i.id !== itemId);
+            // Close cart if removing last item to prevent errors
+            if (filtered.length === 0) {
+                setTimeout(() => setIsOpen(false), 100);
+            }
+            return filtered;
+        });
     };
 
     const updateQuantity = (itemId: string, quantity: number) => {
