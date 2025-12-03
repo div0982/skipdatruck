@@ -4,11 +4,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/db';
+import { generatePickupCode } from '@/lib/pickup-codes';
 
 export async function POST(req: NextRequest) {
     let orderNumber: string | undefined;
     let paymentIntentId: string | undefined;
-    
+
     try {
         const body = await req.json();
         paymentIntentId = body.paymentIntentId;
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
 
         // Parse order data from metadata
         const metadata = paymentIntent.metadata;
-        
+
         // Reconstruct items from metadata (handles both single field and chunked format)
         let items: any[] = [];
         if (metadata.items) {
@@ -109,6 +110,9 @@ export async function POST(req: NextRequest) {
             quantity: item.qty || item.quantity || 1,
         }));
 
+        // Generate pickup code
+        const pickupCode = generatePickupCode();
+
         // Create order
         const order = await prisma.order.create({
             data: {
@@ -125,6 +129,7 @@ export async function POST(req: NextRequest) {
                 total: paymentIntent.amount / 100,
                 stripePaymentId: paymentIntent.id,
                 stripeStatus: paymentIntent.status,
+                pickupCode,  // Add pickup code
                 status: 'PENDING',
             },
         });
@@ -161,7 +166,7 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('Failed to create order from payment intent:', error);
-        
+
         // If it's a unique constraint error, the order likely already exists
         // Try to fetch and return it
         if ((error.code === 'P2002' || error.message?.includes('Unique constraint')) && orderNumber) {
@@ -187,7 +192,7 @@ export async function POST(req: NextRequest) {
                         },
                     },
                 });
-                
+
                 if (existingOrder) {
                     console.log(`[FALLBACK] ✅ Found existing order: ${existingOrder.orderNumber}`);
                     return NextResponse.json({
@@ -200,7 +205,7 @@ export async function POST(req: NextRequest) {
                 console.error('[FALLBACK] Failed to fetch existing order:', fetchError);
             }
         }
-        
+
         return NextResponse.json(
             { error: error.message || 'Failed to create order' },
             { status: 500 }
