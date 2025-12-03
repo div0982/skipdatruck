@@ -213,15 +213,6 @@ export default function LiveOrders({ truckId }: LiveOrdersProps) {
                                         ))}
                                     </div>
 
-                                    {/* Pickup Code for READY orders */}
-                                    {order.status === 'READY' && order.pickupCode && (
-                                        <div className="mb-3 p-3 bg-white rounded-lg border-2 border-green-300">
-                                            <p className="text-xs text-gray-600 mb-1">Pickup Code:</p>
-                                            <p className="text-3xl font-bold text-green-600 tracking-widest">{order.pickupCode}</p>
-                                            <p className="text-xs text-gray-500 mt-1">Customer must provide this code</p>
-                                        </div>
-                                    )}
-
                                     {/* Total */}
                                     <div className="flex items-center justify-between mb-4 pt-3 border-t border-gray-200">
                                         <span className="text-sm font-medium text-gray-600">Total</span>
