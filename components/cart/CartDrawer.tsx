@@ -121,7 +121,7 @@ export default function CartDrawer({ truck, businessModel }: CartDrawerProps) {
                 {/* Footer */}
                 <div className="p-6 border-t space-y-4 safe-bottom">
                     {/* Price Breakdown */}
-                    {(() => {
+                    {items.length > 0 ? (() => {
                         const subtotal = total;
 
                         // Calculate fees dynamically
@@ -167,7 +167,11 @@ export default function CartDrawer({ truck, businessModel }: CartDrawerProps) {
                                 </div>
                             </>
                         );
-                    })()}
+                    })() : (
+                        <div className="text-center text-gray-500 py-4">
+                            Your cart is empty
+                        </div>
+                    )}
 
                     <button
                         onClick={handleCheckout}
