@@ -11,6 +11,7 @@ import OrderTracking from '@/components/order/OrderTracking';
 interface Order {
     id: string;
     orderNumber: string;
+    pickupCode?: string;  // Add pickup code
     truck: any;
     items: any;
     subtotal: number;
@@ -38,7 +39,7 @@ function OrderSuccessContent() {
         // Get payment intent ID from URL or session storage
         const urlParams = new URLSearchParams(window.location.search);
         let paymentIntentId = urlParams.get('payment_intent');
-        
+
         // If not in URL, try to extract from client_secret or get from session storage
         if (!paymentIntentId) {
             const clientSecret = urlParams.get('payment_intent_client_secret');
@@ -77,16 +78,16 @@ function OrderSuccessContent() {
                 if (paymentIntentId && attempts >= 3 && !fallbackCalledRef.current) {
                     // Mark that we've called the fallback to prevent duplicate calls
                     fallbackCalledRef.current = true;
-                    
+
                     // After 3 attempts (3 seconds), try to create order from payment intent
                     console.log(`⚠️ Order not found after ${attempts + 1} attempts. Using FALLBACK to create order from payment intent...`);
                     console.log(`📋 Payment Intent ID: ${paymentIntentId}`);
                     console.log(`📋 Order Number: ${orderNumber}`);
-                    
+
                     try {
                         // Ensure payment intent ID has 'pi_' prefix
-                        const formattedPaymentIntentId = paymentIntentId.startsWith('pi_') 
-                            ? paymentIntentId 
+                        const formattedPaymentIntentId = paymentIntentId.startsWith('pi_')
+                            ? paymentIntentId
                             : `pi_${paymentIntentId}`;
 
                         console.log(`🔄 Calling fallback API with Payment Intent: ${formattedPaymentIntentId}`);
@@ -119,7 +120,7 @@ function OrderSuccessContent() {
                             const errorData = await createResponse.json().catch(() => ({ error: 'Unknown error' }));
                             const errorMessage = errorData.error || 'Unknown error';
                             console.error(`❌ FALLBACK FAILED: ${errorMessage}`);
-                            
+
                             // If the error is "order already exists", that's actually fine - the webhook probably created it
                             // Continue polling to find it
                             if (errorMessage.includes('Unique constraint') || errorMessage.includes('already exists')) {
@@ -237,6 +238,30 @@ function OrderSuccessContent() {
                         </a>
                     </div>
                 </div>
+
+                {/* Pickup Code Display */}
+                {order.pickupCode && (
+                    <div className="mb-8 bg-white rounded-2xl shadow-xl p-8 border-4 border-green-500 animate-in">
+                        <div className="text-center">
+                            <h2 className="text-lg font-semibold text-gray-700 mb-2">
+                                Your Pickup Code
+                            </h2>
+                            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 mb-4">
+                                <p className="text-6xl md:text-7xl font-bold text-green-600 tracking-[0.5em] mb-2">
+                                    {order.pickupCode}
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-gray-700 font-medium">
+                                    📱 Save this code! You'll need it to pick up your order.
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    Show this code to the staff when your order is ready
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Order Details */}
                 <OrderDetails order={order} />
