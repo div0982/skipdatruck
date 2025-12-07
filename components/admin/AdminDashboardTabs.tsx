@@ -1,19 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { 
-    BarChart3, 
-    DollarSign, 
-    FileText, 
+import {
+    BarChart3,
+    DollarSign,
+    FileText,
     TrendingUp,
     Download,
     Calendar,
     Truck,
     Receipt,
-    PieChart
+    PieChart,
+    Settings
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { getTaxLabel } from '@/lib/tax-calculator';
+import TruckManagement from './TruckManagement';
 
 interface TruckRevenue {
     truckId: string;
@@ -70,7 +72,7 @@ export default function AdminDashboardTabs({
     recentOrders,
     recentTrucks
 }: AdminDashboardTabsProps) {
-    const [activeTab, setActiveTab] = useState<'overview' | 'revenue' | 'tax' | 'analytics'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'revenue' | 'tax' | 'analytics' | 'management'>('overview');
 
     const handleExportRevenue = () => {
         const csv = [
@@ -144,11 +146,10 @@ export default function AdminDashboardTabs({
                 <div className="flex gap-1">
                     <button
                         onClick={() => setActiveTab('overview')}
-                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
-                            activeTab === 'overview'
-                                ? 'bg-purple-600 text-white'
-                                : 'text-gray-600 hover:bg-gray-50'
-                        }`}
+                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'overview'
+                            ? 'bg-purple-600 text-white'
+                            : 'text-gray-600 hover:bg-gray-50'
+                            }`}
                     >
                         <div className="flex items-center justify-center gap-2">
                             <BarChart3 className="w-4 h-4" />
@@ -157,11 +158,10 @@ export default function AdminDashboardTabs({
                     </button>
                     <button
                         onClick={() => setActiveTab('revenue')}
-                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
-                            activeTab === 'revenue'
-                                ? 'bg-purple-600 text-white'
-                                : 'text-gray-600 hover:bg-gray-50'
-                        }`}
+                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'revenue'
+                            ? 'bg-purple-600 text-white'
+                            : 'text-gray-600 hover:bg-gray-50'
+                            }`}
                     >
                         <div className="flex items-center justify-center gap-2">
                             <DollarSign className="w-4 h-4" />
@@ -170,11 +170,10 @@ export default function AdminDashboardTabs({
                     </button>
                     <button
                         onClick={() => setActiveTab('tax')}
-                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
-                            activeTab === 'tax'
-                                ? 'bg-purple-600 text-white'
-                                : 'text-gray-600 hover:bg-gray-50'
-                        }`}
+                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'tax'
+                            ? 'bg-purple-600 text-white'
+                            : 'text-gray-600 hover:bg-gray-50'
+                            }`}
                     >
                         <div className="flex items-center justify-center gap-2">
                             <FileText className="w-4 h-4" />
@@ -183,15 +182,26 @@ export default function AdminDashboardTabs({
                     </button>
                     <button
                         onClick={() => setActiveTab('analytics')}
-                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
-                            activeTab === 'analytics'
-                                ? 'bg-purple-600 text-white'
-                                : 'text-gray-600 hover:bg-gray-50'
-                        }`}
+                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'analytics'
+                            ? 'bg-purple-600 text-white'
+                            : 'text-gray-600 hover:bg-gray-50'
+                            }`}
                     >
                         <div className="flex items-center justify-center gap-2">
                             <TrendingUp className="w-4 h-4" />
                             <span>Analytics</span>
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('management')}
+                        className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'management'
+                                ? 'bg-purple-600 text-white'
+                                : 'text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        <div className="flex items-center justify-center gap-2">
+                            <Settings className="w-4 h-4" />
+                            <span>Management</span>
                         </div>
                     </button>
                 </div>
@@ -200,7 +210,7 @@ export default function AdminDashboardTabs({
             {/* Tab Content */}
             <div className="space-y-6">
                 {activeTab === 'overview' && (
-                    <OverviewTab 
+                    <OverviewTab
                         totalStats={totalStats}
                         recentOrders={recentOrders}
                         recentTrucks={recentTrucks}
@@ -208,24 +218,28 @@ export default function AdminDashboardTabs({
                 )}
 
                 {activeTab === 'revenue' && (
-                    <RevenueTab 
+                    <RevenueTab
                         trucks={trucks}
                         onExport={handleExportRevenue}
                     />
                 )}
 
                 {activeTab === 'tax' && (
-                    <TaxAuditTab 
+                    <TaxAuditTab
                         taxAudit={taxAudit}
                         onExport={(type) => handleExportTax(type)}
                     />
                 )}
 
                 {activeTab === 'analytics' && (
-                    <AnalyticsTab 
+                    <AnalyticsTab
                         trucks={trucks}
                         totalStats={totalStats}
                     />
+                )}
+
+                {activeTab === 'management' && (
+                    <TruckManagement trucks={trucks} />
                 )}
             </div>
         </div>
@@ -322,11 +336,10 @@ function OverviewTab({ totalStats, recentOrders, recentTrucks }: any) {
                                     <p className="text-sm text-gray-600">{truck.owner.email}</p>
                                 </div>
                                 <div className="text-right">
-                                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                        truck.owner.stripeOnboarded
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-yellow-100 text-yellow-700'
-                                    }`}>
+                                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${truck.owner.stripeOnboarded
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-yellow-100 text-yellow-700'
+                                        }`}>
                                         {truck.owner.stripeOnboarded ? 'Active' : 'Pending'}
                                     </div>
                                     <p className="text-xs text-gray-500 mt-1">{truck._count.orders} orders</p>
@@ -449,14 +462,12 @@ function RevenueTab({ trucks, onExport }: { trucks: TruckRevenue[]; onExport: ()
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
                                         <div className="flex items-center justify-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${
-                                                truck.isActive ? 'bg-green-500' : 'bg-gray-400'
-                                            }`} />
-                                            <span className={`text-xs font-medium ${
-                                                truck.stripeOnboarded 
-                                                    ? 'text-green-700' 
-                                                    : 'text-yellow-700'
-                                            }`}>
+                                            <div className={`w-2 h-2 rounded-full ${truck.isActive ? 'bg-green-500' : 'bg-gray-400'
+                                                }`} />
+                                            <span className={`text-xs font-medium ${truck.stripeOnboarded
+                                                ? 'text-green-700'
+                                                : 'text-yellow-700'
+                                                }`}>
                                                 {truck.stripeOnboarded ? 'Active' : 'Pending'}
                                             </span>
                                         </div>
@@ -581,7 +592,7 @@ function TaxAuditTab({ taxAudit, onExport }: { taxAudit: TaxAuditData; onExport:
                                             {data.orderCount}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700">
-                                            {data.orderCount > 0 
+                                            {data.orderCount > 0
                                                 ? formatCurrency(data.platformFees / data.orderCount)
                                                 : '$0.00'
                                             }
@@ -648,7 +659,7 @@ function TaxAuditTab({ taxAudit, onExport }: { taxAudit: TaxAuditData; onExport:
                                             {data.orderCount}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700">
-                                            {data.orderCount > 0 
+                                            {data.orderCount > 0
                                                 ? formatCurrency(data.platformFees / data.orderCount)
                                                 : '$0.00'
                                             }
@@ -672,8 +683,8 @@ function TaxAuditTab({ taxAudit, onExport }: { taxAudit: TaxAuditData; onExport:
 
 function AnalyticsTab({ trucks, totalStats }: any) {
     const topTrucks = [...trucks].sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 5);
-    const avgOrderValue = totalStats.totalOrders > 0 
-        ? totalStats.totalVolume / totalStats.totalOrders 
+    const avgOrderValue = totalStats.totalOrders > 0
+        ? totalStats.totalVolume / totalStats.totalOrders
         : 0;
     const avgPlatformFee = totalStats.totalOrders > 0
         ? totalStats.totalPlatformRevenue / totalStats.totalOrders
@@ -694,7 +705,7 @@ function AnalyticsTab({ trucks, totalStats }: any) {
                 <div className="bg-white rounded-xl p-6 border border-gray-200">
                     <p className="text-sm text-gray-600 mb-1">Platform Fee Rate</p>
                     <p className="text-2xl font-bold text-gray-900">
-                        {totalStats.totalVolume > 0 
+                        {totalStats.totalVolume > 0
                             ? ((totalStats.totalPlatformRevenue / totalStats.totalVolume) * 100).toFixed(2)
                             : '0.00'
                         }%
