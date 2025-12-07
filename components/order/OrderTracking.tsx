@@ -2,7 +2,7 @@
 
 // Order Tracking Component
 import { useEffect, useState } from 'react';
-import { Clock, ChefHat, CheckCircle } from 'lucide-react';
+import { Clock, ChefHat, CheckCircle, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface OrderTrackingProps {
@@ -11,9 +11,10 @@ interface OrderTrackingProps {
         status: string;
         [key: string]: any;
     };
+    onOrderUpdate?: (order: any) => void;  // Callback to notify parent of updates
 }
 
-export default function OrderTracking({ order: initialOrder }: OrderTrackingProps) {
+export default function OrderTracking({ order: initialOrder, onOrderUpdate }: OrderTrackingProps) {
     const [order, setOrder] = useState(initialOrder);
 
     // Poll for order updates
@@ -23,13 +24,17 @@ export default function OrderTracking({ order: initialOrder }: OrderTrackingProp
                 const response = await fetch(`/api/orders/${order.id}`);
                 const updatedOrder = await response.json();
                 setOrder(updatedOrder);
+                // Notify parent of the update
+                if (onOrderUpdate) {
+                    onOrderUpdate(updatedOrder);
+                }
             } catch (error) {
                 console.error('Failed to fetch order update:', error);
             }
         }, 5000); // Poll every 5 seconds
 
         return () => clearInterval(interval);
-    }, [order.id]);
+    }, [order.id, onOrderUpdate]);
 
     const steps = [
         {
@@ -49,6 +54,12 @@ export default function OrderTracking({ order: initialOrder }: OrderTrackingProp
             label: 'Ready for Pickup',
             icon: CheckCircle,
             description: 'Your order is ready!',
+        },
+        {
+            status: 'PICKED_UP',
+            label: 'Picked Up',
+            icon: Package,
+            description: 'Order complete - thank you!',
         },
     ];
 
@@ -122,6 +133,14 @@ export default function OrderTracking({ order: initialOrder }: OrderTrackingProp
                 <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
                     <p className="text-green-800 font-semibold text-center">
                         🎉 Your order is ready for pickup!
+                    </p>
+                </div>
+            )}
+
+            {(order.status === 'PICKED_UP' || order.status === 'COMPLETED') && (
+                <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                    <p className="text-purple-800 font-semibold text-center">
+                        ✅ Order picked up - Enjoy your meal!
                     </p>
                 </div>
             )}

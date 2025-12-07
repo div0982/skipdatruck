@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import LiveOrders from '@/components/dashboard/merchant/LiveOrders';
 import DashboardStats from '@/components/dashboard/merchant/DashboardStats';
+import ShopStatusToggle from '@/components/dashboard/merchant/ShopStatusToggle';
 import StripeConnectButton from '@/components/stripe/StripeConnectButton';
 import StripeDashboardButton from '@/components/stripe/StripeDashboardButton';
 
@@ -107,6 +108,12 @@ export default async function MerchantDashboard() {
                 </div>
 
                 <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+                    {/* Shop Status Toggle */}
+                    <ShopStatusToggle
+                        truckId={truck.id}
+                        initialStatus={truck.shopStatus || 'OPEN'}
+                    />
+
                     {/* Stats */}
                     <DashboardStats
                         todayOrders={todayOrders.length}

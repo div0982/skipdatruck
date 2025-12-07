@@ -35,19 +35,39 @@ export default async function TruckPage({ params }: { params: Promise<{ id: stri
             notFound();
         }
 
+        // Check shop status
+        const shopStatus = truck.shopStatus || 'OPEN';
+        const isShopAvailable = shopStatus === 'OPEN';
+
         // Group items by category
         const categories = [...new Set(truck.menuItems.map(item => item.category))];
 
         return (
             <CartProvider truck={truck}>
                 <div className="min-h-screen bg-white pb-24">
+                    {/* Shop Status Banner */}
+                    {shopStatus === 'PAUSED' && (
+                        <div className="bg-yellow-500 text-white px-4 py-3 text-center">
+                            <p className="font-semibold">⏸️ This shop is temporarily paused</p>
+                            <p className="text-sm opacity-90">They're catching up on orders. Please check back soon!</p>
+                        </div>
+                    )}
+                    {shopStatus === 'CLOSED' && (
+                        <div className="bg-red-500 text-white px-4 py-3 text-center">
+                            <p className="font-semibold">🔴 This shop is currently closed</p>
+                            <p className="text-sm opacity-90">Please come back later when they're open.</p>
+                        </div>
+                    )}
+
                     <TruckHeader truck={truck} />
                     <MenuBrowser
                         menuItems={truck.menuItems}
                         categories={categories}
                         truckId={truck.id}
                     />
-                    <CartDrawer truck={truck} businessModel={truck.owner.businessModel || 'MERCHANT_PAYS_FEES'} />
+                    {isShopAvailable && (
+                        <CartDrawer truck={truck} businessModel={truck.owner.businessModel || 'MERCHANT_PAYS_FEES'} />
+                    )}
                 </div>
             </CartProvider>
         );

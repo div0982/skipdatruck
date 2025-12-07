@@ -49,6 +49,11 @@ enum BusinessModel {
   MERCHANT_PAYS_FEES    // Merchant pays Stripe fees, 3% commission
 }
 
+enum ShopStatus {
+  OPEN      // Accepting orders
+  PAUSED    // Temporarily not accepting - too busy
+  CLOSED    // Closed for the day
+}
 
 // Food Truck model
 model FoodTruck {
@@ -73,6 +78,7 @@ model FoodTruck {
   
   // Status
   isActive          Boolean     @default(true)
+  shopStatus        ShopStatus  @default(OPEN)
   
   // Relations
   menuItems         MenuItem[]

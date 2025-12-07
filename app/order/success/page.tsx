@@ -3,7 +3,7 @@
 // Order Success Page - Shows order confirmation after payment
 // Polls for order by orderNumber (order is created by webhook after payment)
 
-import { useEffect, useState, Suspense, useRef } from 'react';
+import { useEffect, useState, Suspense, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OrderDetails from '@/components/order/OrderDetails';
 import OrderTracking from '@/components/order/OrderTracking';
@@ -239,8 +239,8 @@ function OrderSuccessContent() {
                     </div>
                 </div>
 
-                {/* Pickup Code Display */}
-                {order.pickupCode && (
+                {/* Pickup Code Display - Only show if order not yet picked up */}
+                {order.pickupCode && order.status !== 'PICKED_UP' && order.status !== 'COMPLETED' && (
                     <div className="mb-8 bg-white rounded-2xl shadow-xl p-8 border-4 border-green-500 animate-in">
                         <div className="text-center">
                             <h2 className="text-lg font-semibold text-gray-700 mb-2">
@@ -263,11 +263,33 @@ function OrderSuccessContent() {
                     </div>
                 )}
 
+                {/* Order Picked Up Confirmation */}
+                {(order.status === 'PICKED_UP' || order.status === 'COMPLETED') && (
+                    <div className="mb-8 bg-white rounded-2xl shadow-xl p-8 border-4 border-purple-500 animate-in">
+                        <div className="text-center">
+                            <div className="w-20 h-20 bg-purple-500 rounded-full mx-auto flex items-center justify-center mb-4">
+                                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                                Order Picked Up! 🎉
+                            </h2>
+                            <p className="text-gray-600">
+                                Thank you for your order. Enjoy your meal!
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Order Details */}
                 <OrderDetails order={order} />
 
                 {/* Order Tracking */}
-                <OrderTracking order={order} />
+                <OrderTracking
+                    order={order}
+                    onOrderUpdate={(updatedOrder) => setOrder(updatedOrder)}
+                />
             </div>
         </div>
     );
