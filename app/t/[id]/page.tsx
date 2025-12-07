@@ -7,6 +7,7 @@ import MenuBrowser from '@/components/menu/MenuBrowser';
 import TruckHeader from '@/components/truck/TruckHeader';
 import CartProvider from '@/components/cart/CartProvider';
 import CartDrawer from '@/components/cart/CartDrawer';
+import ShopStatusMonitor from '@/components/truck/ShopStatusMonitor';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,7 @@ export default async function TruckPage({ params }: { params: Promise<{ id: stri
         }
 
         // Check shop status
-        const shopStatus = truck.shopStatus || 'OPEN';
+        const shopStatus = (truck as any).shopStatus || 'OPEN';
         const isShopAvailable = shopStatus === 'OPEN';
 
         // Group items by category
@@ -45,6 +46,9 @@ export default async function TruckPage({ params }: { params: Promise<{ id: stri
         return (
             <CartProvider truck={truck}>
                 <div className="min-h-screen bg-white pb-24">
+                    {/* Real-time shop status monitor */}
+                    <ShopStatusMonitor truckId={truck.id} initialStatus={shopStatus} />
+
                     {/* Shop Status Banner */}
                     {shopStatus === 'PAUSED' && (
                         <div className="bg-yellow-500 text-white px-4 py-3 text-center">

@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { OrderStatus } from '@prisma/client';
 import { validatePickupCodeFormat } from '@/lib/pickup-codes';
 
 export async function POST(req: NextRequest) {
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
         await prisma.order.update({
             where: { id: orderId },
             data: {
-                status: 'PICKED_UP',
+                status: OrderStatus.PICKED_UP,
                 completedAt: new Date(),
             },
         });
