@@ -33,10 +33,16 @@ export async function DELETE(
 
         const { id } = await params;
 
-        // Check if truck exists
+        // Check if truck exists and get owner info
         const truck = await prisma.foodTruck.findUnique({
             where: { id },
             include: {
+                owner: {
+                    select: {
+                        id: true,
+                        email: true,
+                    },
+                },
                 _count: {
                     select: {
                         orders: true,
@@ -53,9 +59,15 @@ export async function DELETE(
             );
         }
 
-        // Hard delete: First delete all orders (and their pickup events will cascade)
-        // Then delete all menu items
-        // Finally delete the truck itself
+        const ownerId = truck.owner.id;
+        const ownerEmail = truck.owner.email;
+
+        // Hard delete: Delete in order to avoid FK constraints
+        // 1. Delete all orders (pickup events cascade automatically)
+        // 2. Delete all menu items
+        // 3. Delete the truck
+        // 4. Delete the owner's User account (allows email reuse)
+
         const deletedOrders = await prisma.order.deleteMany({
             where: { truckId: id },
         });
@@ -64,17 +76,23 @@ export async function DELETE(
             where: { truckId: id },
         });
 
-        // Now delete the truck (no more foreign key constraints)
+        // Delete the truck
         await prisma.foodTruck.delete({
             where: { id },
         });
 
+        // Delete the owner's User account so email can be reused
+        await prisma.user.delete({
+            where: { id: ownerId },
+        });
+
         return NextResponse.json({
             success: true,
-            message: `Truck "${truck.name}" and all related data deleted permanently`,
+            message: `Truck "${truck.name}" and owner account (${ownerEmail}) deleted permanently`,
             deletedCounts: {
                 orders: deletedOrders.count,
                 menuItems: deletedMenuItems.count,
+                userAccountDeleted: true,
             },
         });
 
