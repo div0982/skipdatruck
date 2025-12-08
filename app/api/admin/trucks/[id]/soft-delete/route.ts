@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
-export async function DELETE(
+export async function POST(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
@@ -53,35 +53,25 @@ export async function DELETE(
             );
         }
 
-        // Hard delete: First delete all orders (and their pickup events will cascade)
-        // Then delete all menu items
-        // Finally delete the truck itself
+        // Soft delete: Remove all orders and their pickup events
+        // This preserves the truck account and menu items
         const deletedOrders = await prisma.order.deleteMany({
             where: { truckId: id },
         });
 
-        const deletedMenuItems = await prisma.menuItem.deleteMany({
-            where: { truckId: id },
-        });
-
-        // Now delete the truck (no more foreign key constraints)
-        await prisma.foodTruck.delete({
-            where: { id },
-        });
-
         return NextResponse.json({
             success: true,
-            message: `Truck "${truck.name}" and all related data deleted permanently`,
+            message: `Soft delete completed for "${truck.name}". Order history cleared.`,
             deletedCounts: {
                 orders: deletedOrders.count,
-                menuItems: deletedMenuItems.count,
+                menuItemsKept: truck._count.menuItems,
             },
         });
 
     } catch (error: any) {
-        console.error('Truck deletion failed:', error);
+        console.error('Soft delete failed:', error);
         return NextResponse.json(
-            { error: error.message || 'Failed to delete truck' },
+            { error: error.message || 'Failed to soft delete truck data' },
             { status: 500 }
         );
     }

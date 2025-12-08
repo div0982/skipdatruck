@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Trash2, AlertTriangle } from 'lucide-react';
+import { Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
 interface TruckData {
@@ -24,16 +24,25 @@ interface TruckManagementProps {
 export default function TruckManagement({ trucks }: TruckManagementProps) {
     const [deletingTruck, setDeletingTruck] = useState<string | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showSoftDeleteModal, setShowSoftDeleteModal] = useState(false);
     const [selectedTruck, setSelectedTruck] = useState<TruckData | null>(null);
     const [deleteStatus, setDeleteStatus] = useState<{ success?: string; error?: string }>({});
 
-    const handleDeleteClick = (truck: TruckData) => {
+    const handleHardDeleteClick = (truck: TruckData) => {
         setSelectedTruck(truck);
         setShowDeleteModal(true);
+        setShowSoftDeleteModal(false);
         setDeleteStatus({});
     };
 
-    const handleConfirmDelete = async () => {
+    const handleSoftDeleteClick = (truck: TruckData) => {
+        setSelectedTruck(truck);
+        setShowSoftDeleteModal(true);
+        setShowDeleteModal(false);
+        setDeleteStatus({});
+    };
+
+    const handleConfirmHardDelete = async () => {
         if (!selectedTruck) return;
 
         setDeletingTruck(selectedTruck.truckId);
@@ -52,7 +61,6 @@ export default function TruckManagement({ trucks }: TruckManagementProps) {
 
             setDeleteStatus({ success: data.message });
 
-            // Refresh the page after 1.5 seconds
             setTimeout(() => {
                 window.location.reload();
             }, 1500);
@@ -65,8 +73,40 @@ export default function TruckManagement({ trucks }: TruckManagementProps) {
         }
     };
 
+    const handleConfirmSoftDelete = async () => {
+        if (!selectedTruck) return;
+
+        setDeletingTruck(selectedTruck.truckId);
+        setDeleteStatus({});
+
+        try {
+            const response = await fetch(`/api/admin/trucks/${selectedTruck.truckId}/soft-delete`, {
+                method: 'POST',
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to soft delete');
+            }
+
+            setDeleteStatus({ success: data.message });
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+
+        } catch (error: any) {
+            console.error('Soft delete failed:', error);
+            setDeleteStatus({ error: error.message || 'Failed to soft delete' });
+        } finally {
+            setDeletingTruck(null);
+        }
+    };
+
     const handleCancelDelete = () => {
         setShowDeleteModal(false);
+        setShowSoftDeleteModal(false);
         setSelectedTruck(null);
         setDeleteStatus({});
     };
@@ -76,7 +116,7 @@ export default function TruckManagement({ trucks }: TruckManagementProps) {
             <div className="bg-white rounded-lg border p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Truck Management</h2>
                 <p className="text-sm text-gray-600 mb-6">
-                    Manage all food trucks on the platform. Delete trucks to remove all their data including orders, menu items, and earnings.
+                    Manage all food trucks on the platform. Two deletion options: <strong>Soft Delete</strong> (reset order history, keep menu) or <strong>Hard Delete</strong> (remove everything).
                 </p>
 
                 <div className="overflow-x-auto">
@@ -131,13 +171,22 @@ export default function TruckManagement({ trucks }: TruckManagementProps) {
                                             </div>
                                         </td>
                                         <td className="py-4 text-right">
-                                            <button
-                                                onClick={() => handleDeleteClick(truck)}
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-700 hover:text-red-900 hover:bg-red-50 rounded-md transition-colors"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                                Delete
-                                            </button>
+                                            <div className="flex gap-2 justify-end">
+                                                <button
+                                                    onClick={() => handleSoftDeleteClick(truck)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-yellow-700 hover:text-yellow-900 hover:bg-yellow-50 rounded-md transition-colors"
+                                                >
+                                                    <RefreshCw className="w-4 h-4" />
+                                                    Reset
+                                                </button>
+                                                <button
+                                                    onClick={() => handleHardDeleteClick(truck)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-700 hover:text-red-900 hover:bg-red-50 rounded-md transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    Delete
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -147,7 +196,7 @@ export default function TruckManagement({ trucks }: TruckManagementProps) {
                 </div>
             </div>
 
-            {/* Delete Confirmation Modal */}
+            {/* Hard Delete Confirmation Modal */}
             {showDeleteModal && selectedTruck && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg max-w-md w-full p-6">
@@ -157,10 +206,10 @@ export default function TruckManagement({ trucks }: TruckManagementProps) {
                             </div>
                             <div className="flex-1">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                                    Delete Truck Account?
+                                    Delete Truck Permanently?
                                 </h3>
                                 <p className="text-sm text-gray-600">
-                                    This will permanently delete <strong>{selectedTruck.truckName}</strong> and ALL related data:
+                                    This will <strong>permanently delete</strong> <strong>{selectedTruck.truckName}</strong> and ALL data:
                                 </p>
                             </div>
                         </div>
@@ -171,6 +220,7 @@ export default function TruckManagement({ trucks }: TruckManagementProps) {
                                 <li>• All menu items will be removed</li>
                                 <li>• {formatCurrency(selectedTruck.totalRevenue)} in revenue history will be lost</li>
                                 <li>• The truck account cannot be recovered</li>
+                                <li>• Owner must recreate truck to continue</li>
                             </ul>
                         </div>
 
@@ -195,11 +245,77 @@ export default function TruckManagement({ trucks }: TruckManagementProps) {
                                 Cancel
                             </button>
                             <button
-                                onClick={handleConfirmDelete}
+                                onClick={handleConfirmHardDelete}
                                 disabled={!!deletingTruck}
                                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium"
                             >
                                 {deletingTruck ? 'Deleting...' : 'Delete Permanently'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Soft Delete Confirmation Modal */}
+            {showSoftDeleteModal && selectedTruck && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full p-6">
+                        <div className="flex items-start gap-4 mb-4">
+                            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                                <RefreshCw className="w-6 h-6 text-yellow-600" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                                    Reset Truck Data?
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                    This will <strong>reset order history</strong> for <strong>{selectedTruck.truckName}</strong>:
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                            <p className="text-sm font-semibold text-yellow-900 mb-2">Will Delete:</p>
+                            <ul className="text-sm text-yellow-900 space-y-1">
+                                <li>• {selectedTruck.totalOrders} orders (all history)</li>
+                                <li>• {formatCurrency(selectedTruck.totalRevenue)} in revenue records</li>
+                                <li>• All pickup events and tax audit data</li>
+                            </ul>
+                            <p className="text-sm font-semibold text-green-700 mt-3 mb-1">Will Keep:</p>
+                            <ul className="text-sm text-green-700 space-y-1">
+                                <li>✓ Truck account and settings</li>
+                                <li>✓ All menu items</li>
+                                <li>✓ Owner account</li>
+                                <li>✓ Stripe connection</li>
+                            </ul>
+                        </div>
+
+                        {deleteStatus.error && (
+                            <div className="bg-red-100 border border-red-300 rounded-lg p-3 mb-4">
+                                <p className="text-sm text-red-800">{deleteStatus.error}</p>
+                            </div>
+                        )}
+
+                        {deleteStatus.success && (
+                            <div className="bg-green-100 border border-green-300 rounded-lg p-3 mb-4">
+                                <p className="text-sm text-green-800">{deleteStatus.success}</p>
+                            </div>
+                        )}
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleCancelDelete}
+                                disabled={!!deletingTruck}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmSoftDelete}
+                                disabled={!!deletingTruck}
+                                className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 font-medium"
+                            >
+                                {deletingTruck ? 'Resetting...' : 'Reset Data'}
                             </button>
                         </div>
                     </div>
