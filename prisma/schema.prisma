@@ -47,6 +47,7 @@ enum UserRole {
 enum BusinessModel {
   PLATFORM_PAYS_FEES    // Platform absorbs Stripe fees, uses tier system
   MERCHANT_PAYS_FEES    // Merchant pays Stripe fees, 3% commission
+  HYBRID                // Platform pays fees + 1% application fee from merchant
 }
 
 enum ShopStatus {

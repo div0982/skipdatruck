@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
         // Store all order data in PaymentIntent metadata instead
         // IMPORTANT: Stripe metadata has a 500-character limit per value
         // So we store minimal item data (ID, quantity, price) and fetch full details later
-        
+
         // Create minimal item representation to avoid metadata size limits
         const minimalItems = items.map((item: any) => ({
             id: item.menuItemId || item.id,
@@ -190,6 +190,17 @@ export async function POST(req: NextRequest) {
                 // Platform keeps: platformFee
                 // Merchant receives: subtotal + tax - stripe fee (calculated by Stripe)
                 paymentIntentData.application_fee_amount = toStripeCents(platformFee);
+                paymentIntentData.transfer_data = {
+                    destination: truck.owner.stripeConnectId,
+                };
+            } else if (businessModel === BusinessModel.HYBRID) {
+                // HYBRID: Platform pays fees + 1% application fee from merchant
+                // Platform keeps: platformFee (from customer) + 1% of total (from merchant payout)
+                // Application fee: 1% of order total (deducted from merchant)
+                const applicationFeeAmount = subtotal * 0.01;
+                const totalApplicationFee = platformFee + applicationFeeAmount;
+
+                paymentIntentData.application_fee_amount = toStripeCents(totalApplicationFee);
                 paymentIntentData.transfer_data = {
                     destination: truck.owner.stripeConnectId,
                 };

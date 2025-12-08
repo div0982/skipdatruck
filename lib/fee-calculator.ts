@@ -20,6 +20,7 @@
 export enum BusinessModel {
     PLATFORM_PAYS_FEES = 'PLATFORM_PAYS_FEES',  // Complex tier system
     MERCHANT_PAYS_FEES = 'MERCHANT_PAYS_FEES',  // Simple 3% commission
+    HYBRID = 'HYBRID',  // Platform pays fees + 1% application fee from merchant
 }
 
 export interface FeeBreakdown {
@@ -175,7 +176,8 @@ export function calculateFees(
         tier = null;
         tierDescription = 'Merchant pays Stripe fees (3% commission)';
     } else {
-        // PLATFORM_PAYS_FEES mode: Complex tier logic
+        // PLATFORM_PAYS_FEES or HYBRID mode: Complex tier logic
+        // (HYBRID adds additional 1% application fee in payment processing)
         totalPayment = subtotal + taxAmount + platformFee;
         stripeFee = calculateStripeFee(totalPayment);
         platformProfit = platformFee - stripeFee;

@@ -180,8 +180,8 @@ export default function SignupPage() {
                             <div className="space-y-3">
                                 {/* Merchant Pays (Recommended) */}
                                 <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${businessModel === 'MERCHANT_PAYS_FEES'
-                                        ? 'border-purple-600 bg-white shadow-sm'
-                                        : 'border-gray-200 bg-white/50 hover:border-purple-300'
+                                    ? 'border-purple-600 bg-white shadow-sm'
+                                    : 'border-gray-200 bg-white/50 hover:border-purple-300'
                                     }`}>
                                     <input
                                         type="radio"
@@ -207,8 +207,8 @@ export default function SignupPage() {
 
                                 {/* Platform Pays */}
                                 <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${businessModel === 'PLATFORM_PAYS_FEES'
-                                        ? 'border-purple-600 bg-white shadow-sm'
-                                        : 'border-gray-200 bg-white/50 hover:border-purple-300'
+                                    ? 'border-purple-600 bg-white shadow-sm'
+                                    : 'border-gray-200 bg-white/50 hover:border-purple-300'
                                     }`}>
                                     <input
                                         type="radio"
@@ -223,6 +223,33 @@ export default function SignupPage() {
                                         <span className="font-semibold text-gray-900">Platform Pays Stripe Fees</span>
                                         <p className="text-sm text-gray-600 mt-1">
                                             <strong>4-7% fee</strong> - We handle all payment processing. No Stripe setup required.
+                                        </p>
+                                    </div>
+                                </label>
+
+                                {/* Hybrid Model */}
+                                <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${businessModel === 'HYBRID'
+                                    ? 'border-purple-600 bg-white shadow-sm'
+                                    : 'border-gray-200 bg-white/50 hover:border-purple-300'
+                                    }`}>
+                                    <input
+                                        type="radio"
+                                        name="businessModel"
+                                        value="HYBRID"
+                                        checked={businessModel === 'HYBRID'}
+                                        onChange={(e) => setBusinessModel(e.target.value)}
+                                        className="mt-1"
+                                        disabled={loading}
+                                    />
+                                    <div className="ml-3 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-semibold text-gray-900">Hybrid Model</span>
+                                            <span className="px-2 py-0.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold rounded-full">
+                                                BEST VALUE
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            <strong>Platform pays Stripe fees + 1% application fee</strong> - We cover payment processing, you pay just 1% of each order. Maximum profit!
                                         </p>
                                     </div>
                                 </label>
