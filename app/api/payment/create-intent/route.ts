@@ -194,16 +194,27 @@ export async function POST(req: NextRequest) {
                     destination: truck.owner.stripeConnectId,
                 };
             } else if (businessModel === BusinessModel.HYBRID) {
-                // HYBRID: Platform pays fees + 1% application fee from merchant
-                // Platform keeps: platformFee (from customer) + 1% of total (from merchant payout)
-                // Application fee: 1% of order total (deducted from merchant)
-                const applicationFeeAmount = subtotal * 0.01;
-                const totalApplicationFee = platformFee + applicationFeeAmount;
+                // HYBRID: Service fee goes directly to platform, 1% taken from merchant
+                // Customer pays: $14.40 total (subtotal + tax + service fee)
+                // Charge goes to PLATFORM account (not merchant)
+                // Transfer to merchant: subtotal + tax = $13.53
+                // Application fee (from merchant's transfer): 1% of subtotal = $0.12
+                // Platform keeps: service fee ($0.87) + 1% fee ($0.12) - Stripe fees
+                // 
+                // Result in merchant's Stripe dashboard:
+                //   Gross: $13.53 (subtotal + tax)
+                //   Platform fee: -$0.12 (1% of subtotal)
+                //   Net: $13.41
+                const merchantTransferAmount = subtotal + tax; // What merchant should receive before 1% fee
+                const applicationFeeAmount = subtotal * 0.01; // 1% fee from merchant
 
-                paymentIntentData.application_fee_amount = toStripeCents(totalApplicationFee);
+                // Charge stays on platform account, we transfer (subtotal + tax) to merchant
                 paymentIntentData.transfer_data = {
+                    amount: toStripeCents(merchantTransferAmount), // Only transfer subtotal + tax
                     destination: truck.owner.stripeConnectId,
                 };
+                // Platform takes 1% from the transfer as application fee
+                paymentIntentData.application_fee_amount = toStripeCents(applicationFeeAmount);
             } else {
                 // Merchant pays Stripe fees - use direct transfer
                 // Platform takes commission upfront, merchant pays their own Stripe fees
