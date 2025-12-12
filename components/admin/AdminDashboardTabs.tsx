@@ -13,7 +13,7 @@ import {
     PieChart,
     Settings
 } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDateISOEST } from '@/lib/utils';
 import { getTaxLabel } from '@/lib/tax-calculator';
 import TruckManagement from './TruckManagement';
 
@@ -94,7 +94,7 @@ export default function AdminDashboardTabs({
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `truck-revenue-${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `truck-revenue-${formatDateISOEST(new Date())}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
     };
@@ -115,7 +115,7 @@ export default function AdminDashboardTabs({
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `platform-revenue-monthly-${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `platform-revenue-monthly-${formatDateISOEST(new Date())}.csv`;
             a.click();
             window.URL.revokeObjectURL(url);
         } else {
@@ -133,7 +133,7 @@ export default function AdminDashboardTabs({
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `platform-revenue-quarterly-${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `platform-revenue-quarterly-${formatDateISOEST(new Date())}.csv`;
             a.click();
             window.URL.revokeObjectURL(url);
         }
@@ -195,8 +195,8 @@ export default function AdminDashboardTabs({
                     <button
                         onClick={() => setActiveTab('management')}
                         className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'management'
-                                ? 'bg-purple-600 text-white'
-                                : 'text-gray-600 hover:bg-gray-50'
+                            ? 'bg-purple-600 text-white'
+                            : 'text-gray-600 hover:bg-gray-50'
                             }`}
                     >
                         <div className="flex items-center justify-center gap-2">

@@ -3,7 +3,7 @@
 // Live Orders Component with realtime updates and pickup confirmation
 import { useEffect, useState } from 'react';
 import { Order } from '@prisma/client';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatTimeEST } from '@/lib/utils';
 import { Clock, ChefHat, CheckCircle, XCircle, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -192,10 +192,7 @@ export default function LiveOrders({ truckId }: LiveOrdersProps) {
                                             <div>
                                                 <h3 className="font-bold text-gray-900">{order.orderNumber}</h3>
                                                 <p className="text-sm text-gray-600">
-                                                    {new Date(order.createdAt).toLocaleTimeString('en-CA', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                    })}
+                                                    {formatTimeEST(order.createdAt)}
                                                 </p>
                                             </div>
                                         </div>

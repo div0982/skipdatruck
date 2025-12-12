@@ -34,6 +34,7 @@ export interface FeeBreakdown {
     tier: 1 | 2 | 3 | null; // null for MERCHANT_PAYS_FEES mode
     tierDescription: string;
     feePercentage: number; // Fee as % of subtotal
+    merchantApplicationFee: number; // 1% fee for HYBRID model (0 for others)
 }
 
 export interface FeeTier {
@@ -167,17 +168,40 @@ export function calculateFees(
     let tier: 1 | 2 | 3 | null;
     let tierDescription: string;
 
+    // For HYBRID model: 1% application fee from merchant
+    const merchantApplicationFee = businessModel === BusinessModel.HYBRID
+        ? Math.round(subtotal * 0.01 * 100) / 100
+        : 0;
+
     if (businessModel === BusinessModel.MERCHANT_PAYS_FEES) {
         // MERCHANT_PAYS_FEES mode: Simple logic
-        // Merchant pays Stripe, we just take 3% commission
+        // Merchant pays Stripe directly, we just take 3% commission
         totalPayment = subtotal + taxAmount + platformFee;
-        stripeFee = 0; // Merchant pays this, not us
+        stripeFee = 0; // Merchant pays this via direct charges, not us
         platformProfit = platformFee; // Full commission is our profit
         tier = null;
         tierDescription = 'Merchant pays Stripe fees (3% commission)';
+    } else if (businessModel === BusinessModel.HYBRID) {
+        // HYBRID mode: Platform pays Stripe fees, Merchant pays 1% app fee
+        // Customer pays: subtotal + tax + platformFee (tiered)
+        totalPayment = subtotal + taxAmount + platformFee;
+        stripeFee = calculateStripeFee(totalPayment);
+        // Platform profit = tiered fee + 1% merchant fee - Stripe fees
+        platformProfit = platformFee + merchantApplicationFee - stripeFee;
+
+        // Safety guard - ensure minimum profit
+        if (platformProfit < MIN_PROFIT) {
+            const shortfall = MIN_PROFIT - platformProfit;
+            platformFee += shortfall;
+            totalPayment += shortfall;
+            platformProfit = MIN_PROFIT;
+        }
+
+        const tierData = getTierForAmount(subtotal);
+        tier = FEE_TIERS.indexOf(tierData) + 1 as 1 | 2 | 3;
+        tierDescription = `${tierData.description} + 1% merchant fee`;
     } else {
-        // PLATFORM_PAYS_FEES or HYBRID mode: Complex tier logic
-        // (HYBRID adds additional 1% application fee in payment processing)
+        // PLATFORM_PAYS_FEES mode: Complex tier logic
         totalPayment = subtotal + taxAmount + platformFee;
         stripeFee = calculateStripeFee(totalPayment);
         platformProfit = platformFee - stripeFee;
@@ -208,6 +232,7 @@ export function calculateFees(
         tier,
         tierDescription,
         feePercentage: Math.round(feePercentage * 100) / 100,
+        merchantApplicationFee,
     };
 }
 

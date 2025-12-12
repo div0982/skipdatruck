@@ -2,12 +2,12 @@
 
 // Tax Audit Dashboard Component
 import { useState } from 'react';
-import { 
-    DollarSign, 
-    Receipt, 
-    TrendingUp, 
-    FileText, 
-    Download, 
+import {
+    DollarSign,
+    Receipt,
+    TrendingUp,
+    FileText,
+    Download,
     Calendar,
     AlertCircle,
     CheckCircle,
@@ -17,7 +17,7 @@ import {
     PieChart,
     ArrowLeft
 } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDateShortEST, formatShortMonthDayEST, formatDateISOEST, formatHourLabel } from '@/lib/utils';
 import { getTaxLabel } from '@/lib/tax-calculator';
 import { useRouter } from 'next/navigation';
 
@@ -47,13 +47,13 @@ interface TaxAuditDashboardProps {
     };
 }
 
-export default function TaxAuditDashboard({ 
-    truck, 
-    orders, 
-    period, 
-    startDate, 
-    endDate, 
-    stats 
+export default function TaxAuditDashboard({
+    truck,
+    orders,
+    period,
+    startDate,
+    endDate,
+    stats
 }: TaxAuditDashboardProps) {
     const router = useRouter();
     const [selectedPeriod, setSelectedPeriod] = useState(period);
@@ -67,7 +67,7 @@ export default function TaxAuditDashboard({
         const csv = [
             ['Date', 'Order Number', 'Subtotal', 'Tax', 'Platform Fee', 'Total', 'Status'].join(','),
             ...orders.map(order => [
-                new Date(order.createdAt).toLocaleDateString('en-CA'),
+                formatDateShortEST(order.createdAt),
                 order.orderNumber,
                 order.subtotal.toFixed(2),
                 order.tax.toFixed(2),
@@ -81,7 +81,7 @@ export default function TaxAuditDashboard({
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `tax-audit-${truck.name}-${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `tax-audit-${truck.name}-${formatDateISOEST(new Date())}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
     };
@@ -130,18 +130,17 @@ export default function TaxAuditDashboard({
                             <button
                                 key={p}
                                 onClick={() => handlePeriodChange(p)}
-                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                    selectedPeriod === p
-                                        ? 'bg-purple-600 text-white'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
+                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${selectedPeriod === p
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
                             >
                                 {p.charAt(0).toUpperCase() + p.slice(1)}
                             </button>
                         ))}
                     </div>
                     <p className="text-sm text-gray-500 mt-2">
-                        {new Date(startDate).toLocaleDateString('en-CA')} - {new Date(endDate).toLocaleDateString('en-CA')}
+                        {formatDateShortEST(startDate)} - {formatDateShortEST(endDate)}
                     </p>
                 </div>
 
@@ -191,7 +190,7 @@ export default function TaxAuditDashboard({
                         <div className="flex-1">
                             <h3 className="font-bold text-yellow-900 mb-2">Tax Remittance Required</h3>
                             <p className="text-yellow-800 mb-3">
-                                You have collected <strong>{formatCurrency(stats.totalTaxCollected)}</strong> in {taxLabel} ({taxRate}%) 
+                                You have collected <strong>{formatCurrency(stats.totalTaxCollected)}</strong> in {taxLabel} ({taxRate}%)
                                 during this period. This amount must be remitted to the Canada Revenue Agency (CRA).
                             </p>
                             <div className="bg-white rounded-lg p-4 border border-yellow-200">
@@ -265,10 +264,7 @@ export default function TaxAuditDashboard({
                                     <div key={day.date} className="flex items-center justify-between pb-2 border-b">
                                         <div className="flex-1">
                                             <p className="text-sm font-medium text-gray-900">
-                                                {new Date(day.date).toLocaleDateString('en-CA', { 
-                                                    month: 'short', 
-                                                    day: 'numeric' 
-                                                })}
+                                                {formatShortMonthDayEST(day.date)}
                                             </p>
                                             <p className="text-xs text-gray-500">{day.orders} orders</p>
                                         </div>
@@ -327,10 +323,7 @@ export default function TaxAuditDashboard({
                     {stats.peakHours.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                             {stats.peakHours.map((hour) => {
-                                const hourLabel = hour.hour === 0 ? '12 AM' : 
-                                                 hour.hour < 12 ? `${hour.hour} AM` : 
-                                                 hour.hour === 12 ? '12 PM' : 
-                                                 `${hour.hour - 12} PM`;
+                                const hourLabel = formatHourLabel(hour.hour);
                                 return (
                                     <div key={hour.hour} className="text-center p-4 bg-indigo-50 rounded-lg border border-indigo-100">
                                         <p className="text-lg font-bold text-indigo-600">{hourLabel}</p>
@@ -369,7 +362,7 @@ export default function TaxAuditDashboard({
                                     orders.map((order) => (
                                         <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
                                             <td className="py-3 px-4 text-gray-600">
-                                                {new Date(order.createdAt).toLocaleDateString('en-CA')}
+                                                {formatDateShortEST(order.createdAt)}
                                             </td>
                                             <td className="py-3 px-4">
                                                 <span className="font-mono text-purple-600">{order.orderNumber}</span>
@@ -379,12 +372,11 @@ export default function TaxAuditDashboard({
                                             <td className="py-3 px-4 text-right text-purple-600">{formatCurrency(order.platformFee)}</td>
                                             <td className="py-3 px-4 text-right font-bold">{formatCurrency(order.total)}</td>
                                             <td className="py-3 px-4 text-center">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                    order.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
                                                     order.status === 'PREPARING' ? 'bg-orange-100 text-orange-700' :
-                                                    order.status === 'READY' ? 'bg-blue-100 text-blue-700' :
-                                                    'bg-gray-100 text-gray-700'
-                                                }`}>
+                                                        order.status === 'READY' ? 'bg-blue-100 text-blue-700' :
+                                                            'bg-gray-100 text-gray-700'
+                                                    }`}>
                                                     {order.status}
                                                 </span>
                                             </td>

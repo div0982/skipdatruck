@@ -1,6 +1,6 @@
 // Admin Dashboard - Comprehensive platform oversight
 import { prisma } from '@/lib/db';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatMonthYearEST, APP_TIMEZONE } from '@/lib/utils';
 import Link from 'next/link';
 import AdminDashboardTabs from '@/components/admin/AdminDashboardTabs';
 import { Province, BusinessModel } from '@prisma/client';
@@ -102,9 +102,15 @@ export default async function AdminDashboard() {
 
     allOrders.forEach((order) => {
         const orderDate = new Date(order.createdAt || new Date());
-        const monthKey = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
-        const monthLabel = orderDate.toLocaleDateString('en-CA', { year: 'numeric', month: 'long' });
-        
+        // Get month/year in EST timezone
+        const monthParts = orderDate.toLocaleDateString('en-CA', {
+            timeZone: APP_TIMEZONE,
+            year: 'numeric',
+            month: '2-digit',
+        }).split('-');
+        const monthKey = `${monthParts[0]}-${monthParts[1]}`;
+        const monthLabel = formatMonthYearEST(orderDate);
+
         if (!monthlyRevenue.has(monthKey)) {
             monthlyRevenue.set(monthKey, {
                 month: monthLabel,
@@ -130,10 +136,19 @@ export default async function AdminDashboard() {
 
     allOrders.forEach((order) => {
         const orderDate = new Date(order.createdAt || new Date());
-        const quarter = Math.floor(orderDate.getMonth() / 3) + 1;
-        const quarterKey = `${orderDate.getFullYear()}-Q${quarter}`;
-        const quarterLabel = `Q${quarter} ${orderDate.getFullYear()}`;
-        
+        // Get quarter in EST timezone
+        const monthNum = parseInt(orderDate.toLocaleDateString('en-CA', {
+            timeZone: APP_TIMEZONE,
+            month: 'numeric',
+        }), 10);
+        const yearNum = parseInt(orderDate.toLocaleDateString('en-CA', {
+            timeZone: APP_TIMEZONE,
+            year: 'numeric',
+        }), 10);
+        const quarter = Math.floor((monthNum - 1) / 3) + 1;
+        const quarterKey = `${yearNum}-Q${quarter}`;
+        const quarterLabel = `Q${quarter} ${yearNum}`;
+
         if (!quarterlyRevenue.has(quarterKey)) {
             quarterlyRevenue.set(quarterKey, {
                 quarter: quarterLabel,
@@ -246,8 +261,8 @@ export default async function AdminDashboard() {
                         totalTrucks,
                         totalOrders,
                         totalPlatformRevenue,
-                    totalStripeFees,
-                    netPlatformRevenue,
+                        totalStripeFees,
+                        netPlatformRevenue,
                         totalVolume,
                         totalTaxCollected,
                     }}

@@ -1,7 +1,7 @@
 'use client';
 
 // Order Details Component
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDateTimeEST } from '@/lib/utils';
 import { Calendar, MapPin, Receipt } from 'lucide-react';
 
 interface OrderDetailsProps {
@@ -59,10 +59,7 @@ export default function OrderDetails({ order }: OrderDetailsProps) {
             {/* Order Time */}
             <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Calendar className="w-4 h-4" />
-                <span>{new Date(order.createdAt).toLocaleString('en-CA', {
-                    dateStyle: 'medium',
-                    timeStyle: 'short',
-                })}</span>
+                <span>{formatDateTimeEST(order.createdAt)}</span>
             </div>
 
             {/* Items */}

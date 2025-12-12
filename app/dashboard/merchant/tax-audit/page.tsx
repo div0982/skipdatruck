@@ -2,13 +2,14 @@
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import TaxAuditDashboard from '@/components/dashboard/merchant/TaxAuditDashboard';
+import { getDateKeyEST, getHourEST, getStartOfDayEST, getEndOfDayEST } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TaxAuditPage({ 
-    searchParams 
-}: { 
-    searchParams: Promise<{ 
+export default async function TaxAuditPage({
+    searchParams
+}: {
+    searchParams: Promise<{
         truckId?: string;
         startDate?: string;
         endDate?: string;
@@ -124,9 +125,9 @@ export default async function TaxAuditPage({
         const totalCollected = orders.reduce((sum, order) => sum + order.total, 0);
         const netRevenue = totalRevenue - totalPlatformFees; // Revenue after platform fees
 
-        // Tax breakdown by period (daily for trends)
+        // Tax breakdown by period (daily for trends) - using EST timezone
         const dailyBreakdown = orders.reduce((acc, order) => {
-            const date = new Date(order.createdAt).toISOString().split('T')[0];
+            const date = getDateKeyEST(order.createdAt);
             if (!acc[date]) {
                 acc[date] = {
                     date,
@@ -171,9 +172,9 @@ export default async function TaxAuditPage({
             .sort((a, b) => b.revenue - a.revenue)
             .slice(0, 10);
 
-        // Hourly breakdown (peak hours)
+        // Hourly breakdown (peak hours) - using EST timezone
         const hourlyBreakdown = orders.reduce((acc, order) => {
-            const hour = new Date(order.createdAt).getHours();
+            const hour = getHourEST(order.createdAt);
             if (!acc[hour]) {
                 acc[hour] = { hour, orders: 0, revenue: 0 };
             }
