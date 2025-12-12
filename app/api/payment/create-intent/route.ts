@@ -165,16 +165,29 @@ export async function POST(req: NextRequest) {
             }
 
             else if (businessModel === BusinessModel.MERCHANT_PAYS_FEES) {
-                // DIRECT CHARGE - Merchant pays Stripe fees
-                // Using on_behalf_of makes the connected account the merchant of record
-                // Stripe takes fees from the connected account, not the platform
-                // Platform receives: application_fee_amount (3% commission)
-                // Merchant receives: total - application_fee - Stripe fees
-                paymentIntentData.on_behalf_of = truck.owner.stripeConnectId;
-                paymentIntentData.application_fee_amount = toStripeCents(platformFee);
+                // MERCHANT PAYS STRIPE FEES - Destination charge with explicit transfer
+                // Customer pays: subtotal + tax + platformFee (3%)
+                // Platform receives: platformFee (3% commission) as profit
+                // Merchant receives: subtotal + tax - stripeFee
+                // 
+                // We use explicit transfer_data.amount to deduct Stripe fee from merchant
+                // Platform keeps: total - transferAmount - stripeFee paid to Stripe
+                //               = platformFee (exactly what we want!)
+
+                // Calculate Stripe fee that platform will pay
+                const stripePercentage = 0.029; // 2.9%
+                const stripeFixed = 0.30; // $0.30 CAD
+                const estimatedStripeFee = (total * stripePercentage) + stripeFixed;
+
+                // Merchant gets subtotal + tax minus the Stripe fee
+                const merchantPayout = subtotal + tax - estimatedStripeFee;
+
                 paymentIntentData.transfer_data = {
                     destination: truck.owner.stripeConnectId,
+                    amount: toStripeCents(merchantPayout), // Explicit amount after Stripe deduction
                 };
+                // No application_fee_amount needed - platform keeps (total - merchantPayout)
+                // After Stripe takes their fee from platform, we're left with platformFee (3%)
             }
 
             else if (businessModel === BusinessModel.HYBRID) {
@@ -198,11 +211,15 @@ export async function POST(req: NextRequest) {
             }
 
             else {
-                // Fallback: treat as MERCHANT_PAYS_FEES
-                paymentIntentData.on_behalf_of = truck.owner.stripeConnectId;
-                paymentIntentData.application_fee_amount = toStripeCents(platformFee);
+                // Fallback: treat as MERCHANT_PAYS_FEES (same logic)
+                const stripePercentage = 0.029;
+                const stripeFixed = 0.30;
+                const estimatedStripeFee = (total * stripePercentage) + stripeFixed;
+                const merchantPayout = subtotal + tax - estimatedStripeFee;
+
                 paymentIntentData.transfer_data = {
                     destination: truck.owner.stripeConnectId,
+                    amount: toStripeCents(merchantPayout),
                 };
             }
         }
