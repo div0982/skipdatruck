@@ -41,9 +41,16 @@ export default async function TaxAuditPage({
             );
         }
 
-        // Fetch truck
+        // Fetch truck with owner's business model
         const truck = await prisma.foodTruck.findUnique({
             where: { id: truckId, isActive: true },
+            include: {
+                owner: {
+                    select: {
+                        businessModel: true,
+                    }
+                }
+            }
         });
 
         if (!truck) {
@@ -194,6 +201,7 @@ export default async function TaxAuditPage({
                 period={period}
                 startDate={startDate.toISOString()}
                 endDate={endDate.toISOString()}
+                businessModel={truck.owner?.businessModel || 'MERCHANT_PAYS_FEES'}
                 stats={{
                     totalRevenue,
                     totalTaxCollected,

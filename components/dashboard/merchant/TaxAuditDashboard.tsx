@@ -32,6 +32,7 @@ interface TaxAuditDashboardProps {
     period: string;
     startDate: string;
     endDate: string;
+    businessModel: string; // 'PLATFORM_PAYS_FEES' | 'MERCHANT_PAYS_FEES' | 'HYBRID'
     stats: {
         totalRevenue: number;
         totalTaxCollected: number;
@@ -53,10 +54,32 @@ export default function TaxAuditDashboard({
     period,
     startDate,
     endDate,
+    businessModel,
     stats
 }: TaxAuditDashboardProps) {
     const router = useRouter();
     const [selectedPeriod, setSelectedPeriod] = useState(period);
+
+    // Helper to calculate Stripe fee
+    const calculateStripeFee = (total: number): number => {
+        const STRIPE_PERCENTAGE = 0.029; // 2.9%
+        const STRIPE_FIXED = 0.30; // $0.30 CAD
+        return (total * STRIPE_PERCENTAGE) + STRIPE_FIXED;
+    };
+
+    // Determine what fees to show based on business model
+    const isMerchantPaysFees = businessModel === 'MERCHANT_PAYS_FEES';
+    const isPlatformPaysFees = businessModel === 'PLATFORM_PAYS_FEES';
+
+    // Calculate total Stripe fees for MERCHANT_PAYS_FEES
+    const totalStripeFees = isMerchantPaysFees
+        ? orders.reduce((sum, order) => sum + calculateStripeFee(order.total), 0)
+        : 0;
+
+    // Calculate net revenue based on business model
+    const merchantNetRevenue = isMerchantPaysFees
+        ? stats.totalRevenue + stats.totalTaxCollected - totalStripeFees
+        : stats.netRevenue;
 
     const handlePeriodChange = (newPeriod: string) => {
         setSelectedPeriod(newPeriod);
@@ -352,36 +375,54 @@ export default function TaxAuditDashboard({
                                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Order #</th>
                                     <th className="text-right py-3 px-4 font-semibold text-gray-700">Subtotal</th>
                                     <th className="text-right py-3 px-4 font-semibold text-gray-700">Tax</th>
-                                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Platform Fee</th>
+                                    {isMerchantPaysFees ? (
+                                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Stripe Fee</th>
+                                    ) : !isPlatformPaysFees && (
+                                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Platform Fee</th>
+                                    )}
                                     <th className="text-right py-3 px-4 font-semibold text-gray-700">Total</th>
+                                    {isMerchantPaysFees && (
+                                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Net</th>
+                                    )}
                                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {orders.length > 0 ? (
-                                    orders.map((order) => (
-                                        <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
-                                            <td className="py-3 px-4 text-gray-600">
-                                                {formatDateShortEST(order.createdAt)}
-                                            </td>
-                                            <td className="py-3 px-4">
-                                                <span className="font-mono text-purple-600">{order.orderNumber}</span>
-                                            </td>
-                                            <td className="py-3 px-4 text-right font-medium">{formatCurrency(order.subtotal)}</td>
-                                            <td className="py-3 px-4 text-right text-blue-600">{formatCurrency(order.tax)}</td>
-                                            <td className="py-3 px-4 text-right text-purple-600">{formatCurrency(order.platformFee)}</td>
-                                            <td className="py-3 px-4 text-right font-bold">{formatCurrency(order.total)}</td>
-                                            <td className="py-3 px-4 text-center">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                                                    order.status === 'PREPARING' ? 'bg-orange-100 text-orange-700' :
-                                                        order.status === 'READY' ? 'bg-blue-100 text-blue-700' :
-                                                            'bg-gray-100 text-gray-700'
-                                                    }`}>
-                                                    {order.status}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))
+                                    orders.map((order) => {
+                                        const orderStripeFee = calculateStripeFee(order.total);
+                                        const orderNet = order.subtotal + order.tax - orderStripeFee;
+                                        return (
+                                            <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                                <td className="py-3 px-4 text-gray-600">
+                                                    {formatDateShortEST(order.createdAt)}
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <span className="font-mono text-purple-600">{order.orderNumber}</span>
+                                                </td>
+                                                <td className="py-3 px-4 text-right font-medium">{formatCurrency(order.subtotal)}</td>
+                                                <td className="py-3 px-4 text-right text-blue-600">{formatCurrency(order.tax)}</td>
+                                                {isMerchantPaysFees ? (
+                                                    <td className="py-3 px-4 text-right text-red-600">{formatCurrency(orderStripeFee)}</td>
+                                                ) : !isPlatformPaysFees && (
+                                                    <td className="py-3 px-4 text-right text-purple-600">{formatCurrency(order.platformFee)}</td>
+                                                )}
+                                                <td className="py-3 px-4 text-right font-bold">{formatCurrency(order.total)}</td>
+                                                {isMerchantPaysFees && (
+                                                    <td className="py-3 px-4 text-right font-bold text-green-600">{formatCurrency(orderNet)}</td>
+                                                )}
+                                                <td className="py-3 px-4 text-center">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                                                        order.status === 'PREPARING' ? 'bg-orange-100 text-orange-700' :
+                                                            order.status === 'READY' ? 'bg-blue-100 text-blue-700' :
+                                                                'bg-gray-100 text-gray-700'
+                                                        }`}>
+                                                        {order.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 ) : (
                                     <tr>
                                         <td colSpan={7} className="py-8 text-center text-gray-500">
